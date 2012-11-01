@@ -1,0 +1,2 @@
+mysql-python==1.2.3
+tornado

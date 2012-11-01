@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block body %}
+<script language="javascript" type="text/javascript">
+    var running = false;
+    window.onunload=function() {
+        $.post('/historycount');
+    }
+    setInterval(function(){
+        if (running) {
+            $('#historycount').load('/historycount');
+        }
+    }, 5000);
+    function stopHistory() {
+        running = false;
+        document.getElementById("processing").innerHTML = '';
+        var statusval = document.getElementById("statustext").innerHTML;
+        document.getElementById("statustext").innerHTML = statusval.replace("Researching","Researched");
+        $.post('/historycount');
+    }
+    function runHistory() {
+        if (running == false) {
+            running = true
+            document.getElementById("processing").innerHTML = '<center><img src="/static/images/processing.gif" style="margin-bottom: -23px;"></center>';
+            //requestInventory();
+            //$('#historylist').load('/historylist');
+            document.getElementById("historylistresults").innerHTML = "";
+            $('#historycount').load('/historycount?status=start');
+            $.get('/historyprocess');
+        }
+    }
+    function updateHistory() {
+        var hresult = "";
+        $.get('/historylist', function(data) {
+            document.getElementById("historylistresults").innerHTML = data;
+        });
+
+    }
+</script>
+<br/><br/>
+<div class="shadoweffect-business">
+    Note: The <a href="http://www.geni.com/platform/developer/" target="_blank">Geni API</a> limits applications (this website for all users) to 40 queries every 10 seconds.
+    Since investigating your tree history (and others) could involve <a href="https://www.youtube.com/watch?v=BhtgINeaJWg&feature=share" target="_blank">exponential queries</a>, please be patient.  The page will update automatically with progress every 5 seconds.
+    <br/><br/>
+    While it is common to be related to the same ancestor via different pathways, HistoryLink will only report an ancestor once.  <a href="https://www.geni.com/account_settings/premium_account">Geni Pro</a> members can view the step-by-step pathway to those ancestors.
+</div>
+<br/>
+    <center>
+    <h1>History Link for {{user["name"]}}</h1>
+        <table><tr><td>
+        <div style="display:block; margin-top: 20px; padding-right: 10px;">
+            <button align="MIDDLE" onClick="runHistory();" class="cta cta-green">Start Search</button></div>
+        </td>
+        <td>
+            <div style="display:block; margin-top: 20px; padding-left: 10px;">
+            <button align="MIDDLE" onClick="stopHistory();" class="cta cta-red">Stop Search</button></div>
+        </td></tr></table>
+    <br/>
+    </center>
+<div class="shadoweffect-business">
+    <div style="padding-left: 30px; padding-right: 30px;">
+        <div style="text-align: center" id="statustext"></div>
+        <div id="historycount"></div>
+        <div id="processing"></div>
+        <div style="margin-left: 1px; float: left;"><strong>Ancestors</strong></div><div style="margin-right: 3px; float: right;">Projects</div><br/><hr/>
+        <div id="historylistresults"></div>
+    </div>
+    <div id="count"></div>
+</div>
+
+ <br/>
+{% end %}

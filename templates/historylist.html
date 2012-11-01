@@ -1,0 +1,17 @@
+{% for item in matches %}
+<table style="width: 100%;">
+    <tr>
+    <td style="width: 50%" align="left">
+        <a href='http://www.geni.com/{{item["id"]}}'>{{item["name"]}}</a> is your {{item["relation"]}}<br/>
+    </td>
+    <td style="width: 50%" align="right">
+        {% for idx,project in enumerate(item["projects"]) %}
+            {% if idx > 0 %}
+                <br/>
+            {% end %}
+            <a href='http://www.geni.com/{{project["id"]}}'>{{project["name"]}}</a>
+        {% end %}
+    </td></tr>
+</table>
+<div class="separator"></div>
+{% end %}

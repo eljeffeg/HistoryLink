@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+{% block body %}
+<script language="javascript" type="text/javascript">
+    String.prototype.startswith = function (string) {
+        return(this.indexOf(string) === 0);
+    };
+    function submitProject() {
+        var project_id = document.getElementById("projectval").value.toString();
+        if (project_id.length > 0) {
+            if (project_id.indexOf("/") != -1) {
+                project_id = project_id.substring(project_id.lastIndexOf('/')+1);
+            } else if (project_id.indexOf("project-") != -1) {
+                project_id = project_id.replace("project-", "");
+            }
+            var isnum = /^\d+$/.test(project_id);
+            if (isnum) {
+                document.getElementById("addbutton").disabled = true;
+                document.getElementById("processing").innerHTML = '<br/><img src="/static/images/processing.gif">';
+                window.setTimeout(function() {
+                    $.post("/projectsubmit", {project: project_id}, function() {
+                        document.getElementById("processing").innerHTML = '<br/><table><tr><td><img src="/static/images/checkmarkgreen20px.png" style="padding-right: 3px;"></td><td valign="top" style="padding-top: 1px;"><strong>Project ' + project_id + ' Added</strong></td></tr></table>';
+                        document.getElementById("addbutton").disabled = false;
+                        $.get('/projectlist', function(data) {
+                            if (data != "DONE") {
+                                document.getElementById("projectlist").innerHTML = data;
+                            } else {
+                                //Try again
+                                $('#projectlist').load('/projectlist');
+                            }
+                        });
+                        window.setTimeout(function() {
+                            document.getElementById("processing").innerHTML = '<br/>';
+                        }, 5000);
+                    });
+                }, 500);
+            } else {
+                alert("This does not appear to be a valid Geni project id.\nPlease use the numeric id or the full URL of the project.");
+            }
+        }
+        return
+    }
+    function entsub(e,form){
+        var key=e.keyCode || e.which;
+        if (key==13){
+            submitProject();
+        }
+    }
+</script>
+
+<br/><br/>
+    <div class="shadoweffect-business">
+        HistoryLink does not contain all Geni Projects, as many do not relate to famous or historical figures.&nbsp;&nbsp;If there is a project you think should be added or updated, please submit it below.<br/><br/>
+        <center>
+  <input type="text" name="projectval" id="projectval" onkeypress="entsub(event,this.form);" style="width: 300px;"><button style="margin-left: 8px;" onclick="submitProject();" id="addbutton">Add Project</button><br>
+
+    <div id="processing"><br/></div>
+        </center>
+    </div>
+<br/>
+<div id="projectlist"></div>
+<script language="javascript" type="text/javascript">
+    document.getElementById("addbutton").disabled = false;
+    $('#projectlist').load('/projectlist');
+</script>
+{% end %}
