@@ -153,7 +153,7 @@ class GeniAPI(object):
         return proj.get_results()
 
     def request(self, path, args=None, post_args=None):
-        """Fetches the given path in the Graph API.
+        """Fetches the given path in the Geni API.
 
         We translate args to a valid query string. If post_args is given,
         we send a POST request to the given path with the given arguments.

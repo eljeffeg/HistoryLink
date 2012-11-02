@@ -41,7 +41,12 @@
         var profile_id = document.getElementById("userfield").value.toString();
         if (profile_id.length > 0) {
             if (profile_id.indexOf("/") != -1) {
+                //Grab the GUID from a URL
                 profile_id = "profile-g" + profile_id.substring(profile_id.lastIndexOf('/')+1);
+            }
+            if (profile_id.indexOf("?") != -1) {
+                //In case the copy the profile url by navigating through another ####?through=####
+                profile_id = profile_id.substring(0, profile_id.lastIndexOf('?'));
             }
             if (profile_id.indexOf("profile-") != -1) {
                 window.location.href = "/history?profile=" + profile_id;
