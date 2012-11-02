@@ -343,7 +343,15 @@ class HistoryHandler(BaseHandler):
     @tornado.web.asynchronous
     def get(self):
         user = self.current_user
-        self.render("history.html", user=user)
+        profile_id = self.get_argument("profile", None)
+        if profile_id:
+            info = self.backend.get_profile_info(profile_id, user)
+            username = info["name"]
+            userid = info["id"]
+        else:
+            username = user["name"]
+            userid = user["id"]
+        self.render("history.html", username=username, userid=userid)
 
 class HistoryList(BaseHandler):
     @tornado.web.authenticated
@@ -354,7 +362,7 @@ class HistoryList(BaseHandler):
         matches = cookie.get_matches(user["id"])
         logging.info(" *** Match for " +  str(user["name"]) + " (" + str(user["id"]) + ")")
         for item in matches:
-            name = self.backend.get_profile_name(item["id"])
+            name = self.backend.get_profile_name_db(item["id"])
             projects = self.backend.get_projects(item["id"])
             item["name"] = name
             item["projects"] = projects
@@ -398,13 +406,16 @@ class HistoryProcess(BaseHandler):
     @tornado.web.authenticated
     @tornado.web.asynchronous
     def get(self):
+        profile = self.get_argument("profile", None)
         user = self.current_user
         self.application.linkHolder.set(user["id"], "count", 0)
         self.application.linkHolder.set(user["id"], "running", 1)
         self.application.linkHolder.set(user["id"], "stage", "parents")
         if not options.historyprofiles:
             options.historyprofiles = self.backend.get_history_profiles()
-        args = {"user": user, "base": self}
+        if not profile:
+            profile = user["id"]
+        args = {"user": user, "base": self, "profile": profile}
         HistoryWorker(self.worker_done, args).start()
 
     def worker_done(self, value):
@@ -416,10 +427,12 @@ class HistoryProcess(BaseHandler):
 class HistoryWorker(threading.Thread):
     user = None
     base = None
+    rootprofile = None
     cookie = None
     def __init__(self, callback=None, *args, **kwargs):
         self.user = args[0]["user"]
         self.base = args[0]["base"]
+        self.rootprofile = args[0]["profile"]
         self.cookie = self.base.application.linkHolder
         args = {}
         super(HistoryWorker, self).__init__(*args, **kwargs)
@@ -427,9 +440,12 @@ class HistoryWorker(threading.Thread):
 
     def run(self):
         profile = self.user["id"]
+        rootprofile = self.rootprofile
+        if not rootprofile:
+            rootprofile = profile
         gen = 0
         self.setGeneration(gen)
-        family = self.base.backend.get_family(profile, self.user)
+        family = self.base.backend.get_family(rootprofile, self.user)
         family_group = family.get_family_branch()
         result = self.checkmatch(family_group)
         if len(result) > 0:
@@ -674,6 +690,14 @@ class Backend(object):
         project = geni.get_project_profiles(project)
         return project
 
+    def get_profile_name(self, profile, user):
+        geni = self.get_API(user)
+        return geni.get_profile_name(profile)
+
+    def get_profile_info(self, profile, user):
+        geni = self.get_API(user)
+        return geni.get_profile_info(profile)
+
     def get_project_name(self, project, user):
         geni = self.get_API(user)
         return geni.get_project_name(project)
@@ -730,7 +754,7 @@ class Backend(object):
             count = "{:,.0f}".format(int(profilecount[0]["COUNT(id)"]))
         return count
 
-    def get_profile_name(self, profile):
+    def get_profile_name_db(self, profile):
         if not profile:
             return
         name = "Unknown"

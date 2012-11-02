@@ -111,12 +111,31 @@ class GeniAPI(object):
             project += "/" + path
         return self.request(project, args)
 
+    def get_profile(self, profile, path=None, args=None):
+        if not str(profile).startswith("profile"):
+            profile = "profile-" + profile
+        if path:
+            profile += "/" + path
+        return self.request(profile, args)
+
     def get_project_name(self, project):
         args = {'fields': 'name'}
         name = self.get_project(project, None, args)
         if "name" in name:
             return name["name"]
         return name
+
+    def get_profile_name(self, profile):
+        args = {'fields': 'name'}
+        name = self.get_profile(profile, None, args)
+        if "name" in name:
+            return name["name"]
+        return name
+
+    def get_profile_info(self, profile):
+        args = {'fields': 'name,id'}
+        info = self.get_profile(profile, None, args)
+        return info
 
     def get_project_profiles(self, project):
         args = {'fields': 'id,name'}

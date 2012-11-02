@@ -25,7 +25,7 @@
             //$('#historylist').load('/historylist');
             document.getElementById("historylistresults").innerHTML = "";
             $('#historycount').load('/historycount?status=start');
-            $.get('/historyprocess');
+            $.get('/historyprocess', {"profile": "{{userid}}"});
         }
     }
     function updateHistory() {
@@ -33,7 +33,23 @@
         $.get('/historylist', function(data) {
             document.getElementById("historylistresults").innerHTML = data;
         });
-
+    }
+    function changeUser() {
+        $('.slideDown').slideToggle();
+    }
+    function submitProfile() {
+        var profile_id = document.getElementById("userfield").value.toString();
+        if (profile_id.length > 0) {
+            if (profile_id.indexOf("/") != -1) {
+                profile_id = "profile-g" + profile_id.substring(profile_id.lastIndexOf('/')+1);
+            }
+            if (profile_id.indexOf("profile-") != -1) {
+                window.location.href = "/history?profile=" + profile_id;
+            } else {
+                alert("This does not appear to be a valid Geni profile id.\nPlease use the numeric id or the full URL of the profile.");
+            }
+        }
+        return
     }
 </script>
 <br/><br/>
@@ -45,7 +61,8 @@
 </div>
 <br/>
     <center>
-    <h1>History Link for {{user["name"]}}</h1>
+    <h1>History Link for {{username}}<img src="/static/images/user1.png" style='margin-bottom: -3px; padding-left: 2px; cursor:pointer;' onclick='changeUser()' title="Change Focus Profile" alt="Change Focus Profile"></h1>
+        <div style="margin-top: 16px; margin-bottom: -6px;"><div class="slideDown" style="display: none;"><input style="height: 25px; width: 200px;" id="userfield" onkeypress="entsub(event,this.form);" /><button style="margin-left: 8px;" onclick="submitProfile();">Change</button></div></div>
         <table><tr><td>
         <div style="display:block; margin-top: 20px; padding-right: 10px;">
             <button align="MIDDLE" onClick="runHistory();" class="cta cta-green">Start Search</button></div>
@@ -54,6 +71,7 @@
             <div style="display:block; margin-top: 20px; padding-left: 10px;">
             <button align="MIDDLE" onClick="stopHistory();" class="cta cta-red">Stop Search</button></div>
         </td></tr></table>
+
     <br/>
     </center>
 <div class="shadoweffect-business">
