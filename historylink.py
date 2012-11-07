@@ -142,11 +142,17 @@ class LinkHolder(object):
         if not "matches" in self.cookie[id]:
             self.cookie[id]["matches"] = []
         exists = None
+        if "hits" in self.cookie[id]:
+            self.cookie[id]["hits"] += 1
+        else:
+            self.cookie[id]["hits"] = 1
         for items in self.cookie[id]["matches"]:
             if items["id"] == profile["id"]:
                 #Give more weight to parents over aunts/uncles
                 exists = True
-                if "aunt" in profile["relation"]:
+                if profile["mp"]:
+                    pass
+                elif "aunt" in profile["relation"]:
                     pass
                 elif "uncle" in profile["relation"]:
                     pass
@@ -156,10 +162,8 @@ class LinkHolder(object):
                     pass
                 else:
                     items["relation"] = profile["relation"]
-                    self.cookie[id]["hits"] = len(self.cookie[id]["matches"])
         if not exists:
             self.cookie[id]["matches"].append(profile)
-            self.cookie[id]["hits"] = len(self.cookie[id]["matches"])
 
     def get_matches(self, id):
         if not id in self.cookie:
@@ -360,12 +364,17 @@ class HistoryList(BaseHandler):
         user = self.current_user
         cookie = self.application.linkHolder
         matches = cookie.get_matches(user["id"])
-        logging.info(" *** Match for " +  str(user["name"]) + " (" + str(user["id"]) + ")")
+        hits = cookie.get(user["id"], "hits")
+        showmatch = len(matches) - hits
+        i = 1
         for item in matches:
-            name = self.backend.get_profile_name_db(item["id"])
-            projects = self.backend.get_projects(item["id"])
-            item["name"] = name
-            item["projects"] = projects
+            if item["mp"]:
+                if (i > showmatch):
+                    logging.info(" *** MP Match for " +  str(user["name"]) + " on " + item["id"] + ": " + item["name"])
+            else:
+                if (i > showmatch):
+                    logging.info(" *** Project Match for " +  str(user["name"]) + " on " + item["id"] + ": " + item["name"])
+            i += 1
         cookie.clear_matches(user["id"])
         self.render("historylist.html", matches=matches)
 
@@ -407,6 +416,9 @@ class HistoryProcess(BaseHandler):
     @tornado.web.asynchronous
     def get(self):
         profile = self.get_argument("profile", None)
+        master = self.get_argument("master", None)
+        if master == "false":
+            master = None
         user = self.current_user
         self.application.linkHolder.set(user["id"], "count", 0)
         self.application.linkHolder.set(user["id"], "running", 1)
@@ -415,7 +427,7 @@ class HistoryProcess(BaseHandler):
             options.historyprofiles = self.backend.get_history_profiles()
         if not profile:
             profile = user["id"]
-        args = {"user": user, "base": self, "profile": profile}
+        args = {"user": user, "base": self, "profile": profile, "master": master}
         HistoryWorker(self.worker_done, args).start()
 
     def worker_done(self, value):
@@ -428,11 +440,13 @@ class HistoryWorker(threading.Thread):
     user = None
     base = None
     rootprofile = None
+    master = None
     cookie = None
     def __init__(self, callback=None, *args, **kwargs):
         self.user = args[0]["user"]
         self.base = args[0]["base"]
         self.rootprofile = args[0]["profile"]
+        self.master = args[0]["master"]
         self.cookie = self.base.application.linkHolder
         args = {}
         super(HistoryWorker, self).__init__(*args, **kwargs)
@@ -472,7 +486,18 @@ class HistoryWorker(threading.Thread):
                     for person in result:
                         match = family.get_profile(person, gen)
                         if not "child" in match["relation"] and not "spouse" in match["relation"]:
+                            match["mp"] = False
+                            match["name"] = self.base.backend.get_profile_name_db(person)
+                            match["projects"] = self.base.backend.get_projects(person)
                             self.cookie.add_matches(profile, match)
+                if self.master:
+                    ismaster = self.base.backend.get_master(family_group, self.user)
+                    if len(ismaster) > 0:
+                        for person in ismaster:
+                                match = family.get_profile(person, gen)
+                                match["mp"] = True
+                                match["projects"] = [None]
+                                self.cookie.add_matches(profile, match)
                 count = int(self.cookie.get(profile, "count")) + len(family_group)
                 self.cookie.set(profile, "count", count)
                 parent_list.extend(family.get_parents())
@@ -630,6 +655,10 @@ class Backend(object):
         geni = self.get_API(user)
         return geni.get_family(profile)
 
+    def get_master(self, profiles, user):
+        geni = self.get_API(user)
+        return geni.get_master(profiles)
+
     def add_project(self, project_id, user):
         if not user:
             return
@@ -757,12 +786,14 @@ class Backend(object):
     def get_profile_name_db(self, profile):
         if not profile:
             return
-        name = "Unknown"
+        name = None
         try:
             name = self.db.query("SELECT name FROM profiles WHERE id=%s", profile)
         except:
             name = self.db.query("SELECT name FROM profiles WHERE id=%s", profile)
-        return name[0]["name"]
+        if len(name) > 0:
+            return name[0]["name"]
+        return name
 
 class TimeConvert(tornado.web.UIModule):
     def render(self, dt):

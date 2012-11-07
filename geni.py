@@ -104,6 +104,23 @@ class GeniAPI(object):
         family = self.get_family(profile)
         return family.get_siblings()
 
+    def get_master(self, profiles):
+        path = ""
+        for profile in profiles:
+            path += profile + ","
+        path = path[:-1]
+        args = {"id": path, "fields": "id,name,master_profile"}
+        result = self.request("profile", args)
+        match = []
+        try:
+            for item in result:
+                for profile in result[item]:
+                    if "master_profile" in profile:
+                        match.append({"id": profile["id"], "name": profile["name"]})
+        except:
+            pass
+        return match
+
     def get_project(self, project, path=None, args=None):
         if not str(project).startswith("project"):
             project = "project-" + project
@@ -264,11 +281,18 @@ class Family(object):
 
     def get_profile(self, profile, gen=0):
         relative = None
+        name = None
+        if "id" in profile:
+            name = profile["name"]
+            profile = profile["id"]
         for item in self.family:
             if item.get_id() == profile:
                 relative = item
                 break
-        relative_profile = {"id": relative.get_id(), "relation": relative.get_rel(gen)}
+        if name:
+            relative_profile = {"id": relative.get_id(), "relation": relative.get_rel(gen), "name": name}
+        else:
+            relative_profile = {"id": relative.get_id(), "relation": relative.get_rel(gen)}
         return relative_profile
 
     def get_family_all(self):

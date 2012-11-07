@@ -1,17 +1,23 @@
 {% for item in matches %}
 <table style="width: 100%;">
     <tr>
-    <td style="width: 50%" align="left">
-        <a href='http://www.geni.com/{{item["id"]}}'>{{item["name"]}}</a> is your {{item["relation"]}}<br/>
-    </td>
-    <td style="width: 50%" align="right">
-        {% for idx,project in enumerate(item["projects"]) %}
+        <td style="width: 50%" align="left">
+            <a href='http://www.geni.com/{{item["id"]}}'>{{item["name"]}}</a> is your {{item["relation"]}}<br/>
+        </td>
+        <td style="width: 50%" align="right">
+            {% for idx,project in enumerate(item["projects"]) %}
             {% if idx > 0 %}
-                <br/>
+            <br/>
             {% end %}
-            <a href='http://www.geni.com/{{project["id"]}}'>{{project["name"]}}</a>
-        {% end %}
-    </td></tr>
+            {% if project %}<a href='http://www.geni.com/{{project["id"]}}'>{{project["name"]}}</a>{% else %}Master Profile{% end %}
+            {% end %}
+        </td></tr>
 </table>
 <div class="separator"></div>
 {% end %}
+<script language="javascript" type="text/javascript">
+    var canvas = window.top.document.getElementById("app_content_frame");
+    if (canvas != null) {
+        canvas.style.height = document.getElementById("SiteContainer").offsetHeight + "px";
+    }
+</script>
