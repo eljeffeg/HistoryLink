@@ -88,6 +88,31 @@ class GeniAPI(object):
         #family.print_family()
         return family
 
+    def process_group(self, family_group):
+        family_list = []
+        if family_group and "results" in family_group:
+            for item in family_group["results"]:
+                family = Family("profile", item)
+                family_list.append(family)
+        else:
+            try:
+                logging.warning("**** No results? ****")
+                family = Family("profile", family_group)
+                family_list.append(family)
+            except:
+                pass
+        return family_list
+
+    def get_family_group(self, family_root):
+        ids = "?ids="
+        while len(family_root) > 0:
+            ids += family_root.pop() + ","
+        ids = ids[:-1]
+        args = {"ids": ids, "fields": "id,name,gender,master_profile"}
+        query = "profile/immediate-family"
+        family_group = self.request(query, args)
+        return self.process_group(family_group)
+
     def get_parents(self, profile):
         family = self.get_family(profile)
         return family.get_parents()
@@ -252,7 +277,10 @@ class Project(object):
 
 class Family(object):
     def __init__(self, focus, response):
-        self.focus = focus
+        if "profile" == focus:
+            self.focus = response["focus"]["id"]
+        else:
+            self.focus = focus
         self.response = response
         self.unions = []
         self.family = []
@@ -270,9 +298,15 @@ class Family(object):
                     gender = response["nodes"][item]["gender"]
                 else:
                     gender = "Unknown"
+                master = False
+                name = None
+                if "master_profile" in response["nodes"][item]:
+                    master = True
+                if "name" in response["nodes"][item]:
+                    name = response["nodes"][item]["name"]
                 for edge in response["nodes"][item]["edges"]:
                     rel = response["nodes"][item]["edges"][edge]["rel"]
-                    relative = self.process_unions(edge, item, rel, gender)
+                    relative = self.process_unions(edge, item, rel, gender, name, master)
                     if relative:
                         self.family.append(relative)
 
@@ -299,6 +333,19 @@ class Family(object):
         relatives = []
         for item in self.family:
             relatives.append(item.get_id())
+        return relatives
+
+    def get_family_branch_group(self):
+        relatives = []
+        for relative in self.family:
+            rel = relative.get_rel()
+            id = None
+            if rel == "parent" or rel == "father" or rel == "mother":
+                id = relative.get_id()
+            elif rel == "sibling" or rel == "sister" or rel == "brother":
+                id = relative.get_id()
+            if id:
+                relatives.append(relative)
         return relatives
 
     def get_family_branch(self):
@@ -349,21 +396,29 @@ class Family(object):
             print  "\t" + relative.get_id() + ", " + relative.get_rel()
         print "\n"
 
-    def process_unions(self, union, profile, rel, gender):
+    def process_unions(self, union, profile, rel, gender, name, master=False):
         for item in self.unions:
             if union == item.get_id():
-                return item.get_edge(profile, self.focus, rel, gender)
+                return item.get_edge(profile, self.focus, rel, gender, name, master)
 
 class Relative(object):
-    def __init__(self, id, relation):
+    def __init__(self, id, name, relation, master=False):
         self.id = id
         self.relation = relation
+        self.master = master
+        self.name = name
 
     def get_id(self):
         return self.id
 
-    def get_rel(self, gen=None):
-        if not gen or gen == 0:
+    def get_name(self):
+        return self.name
+
+    def is_master(self):
+        return self.master
+
+    def get_rel(self, gen=0):
+        if gen == 0:
             return self.relation
         else:
             #todo likely needs some work on half siblings, step parents, gen 1, etc.
@@ -427,34 +482,34 @@ class Union(object):
         for edge in self.edges:
             print "\t" + edge.profile + " (" + edge.rel + ")"
 
-    def get_edge(self, profile, focus, rel, gender):
+    def get_edge(self, profile, focus, rel, gender, name, master=False):
         for x in self.edges:
             if focus == x.get_profile() and profile != focus:
                 rel2 = x.get_rel()
                 if (rel == "partner" and rel2 == "child" and gender == "male"):
-                    return Relative(profile, "father")
+                    return Relative(profile, name, "father", master)
                 elif (rel == "partner" and rel2 == "child" and gender == "female"):
-                    return Relative(profile, "mother")
+                    return Relative(profile, name, "mother", master)
                 elif (rel == "partner" and rel2 == "child"):
-                    return Relative(profile, "parent")
+                    return Relative(profile, name, "parent", master)
                 elif (rel == "partner" and rel2 == "partner" and gender == "male" and self.status == "spouse"):
-                    return Relative(profile, "husband")
+                    return Relative(profile, name, "husband", master)
                 elif (rel == "partner" and rel2 == "partner" and gender == "female" and self.status == "spouse"):
-                    return Relative(profile, "wife")
+                    return Relative(profile, name, "wife", master)
                 elif (rel == "partner" and rel2 == "partner" and self.status == "spouse"):
-                    return Relative(profile, "spouse")
+                    return Relative(profile, name, "spouse", master)
                 elif (rel == "child" and rel2 == "partner" and gender == "male"):
-                    return Relative(profile, "son")
+                    return Relative(profile, name, "son", master)
                 elif (rel == "child" and rel2 == "partner" and gender == "female"):
-                    return Relative(profile, "daughter")
+                    return Relative(profile, name, "daughter", master)
                 elif (rel == "child" and rel2 == "partner"):
-                    return Relative(profile, "child")
+                    return Relative(profile, name, "child", master)
                 elif (rel == "child" and rel2 == "child" and gender == "male"):
-                    return Relative(profile, "brother")
+                    return Relative(profile, name, "brother", master)
                 elif (rel == "child" and rel2 == "child" and gender == "female"):
-                    return Relative(profile, "sister")
+                    return Relative(profile, name, "sister", master)
                 elif (rel == "child" and rel2 == "child"):
-                    return Relative(profile, "sibling")
+                    return Relative(profile, name, "sibling", master)
                 else:
                     return None
 

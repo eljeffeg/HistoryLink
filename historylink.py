@@ -67,7 +67,7 @@ define("geni_namespace")
 define("app_url")
 define("listenport", type=int)
 define("silent", type=bool)
-define("historyprofiles", type=list)
+define("historyprofiles", type=set)
 
 #class GeniApplication(tornado.wsgi.WSGIApplication):
 class GeniApplication(tornado.web.Application):
@@ -164,6 +164,7 @@ class LinkHolder(object):
                     items["relation"] = profile["relation"]
         if not exists:
             self.cookie[id]["matches"].append(profile)
+        return exists
 
     def get_matches(self, id):
         if not id in self.cookie:
@@ -172,10 +173,25 @@ class LinkHolder(object):
             return []
         return self.cookie[id]["matches"]
 
+    def add_history(self, id, history):
+        if not id in self.cookie:
+            self.cookie[id] = {}
+        if not "history" in self.cookie[id]:
+            self.cookie[id]["history"] = set(history)
+        else:
+            self.cookie[id]["history"].update(history)
+
+    def get_history(self, id):
+        if not id in self.cookie:
+            return set([])
+        if not "history" in self.cookie[id]:
+            return set([])
+        return self.cookie[id]["history"]
+
     def clear_matches(self, id):
         if not id in self.cookie:
             return
-        #if "matches" in self.cookie[id]:
+            #if "matches" in self.cookie[id]:
             #self.cookie[id]["matches"] = []
         if "hits" in self.cookie[id]:
             self.cookie[id]["hits"] = 0
@@ -260,8 +276,6 @@ class BaseHandler(tornado.web.RequestHandler):
                 })
         redirect_uri = self.request.protocol + "://" + self.request.host +\
                        self.reverse_url("login") + "?" + urllib.urlencode({"next": next})
-        if code:
-            args["code"] = code
         loginurl = "https://www.geni.com/platform/oauth/authorize?" + urllib.urlencode({
             "client_id": options.geni_app_id,
             "redirect_uri": redirect_uri,
@@ -319,7 +333,7 @@ class ProjectWorker(threading.Thread):
 
     def run(self):
         self.base.backend.add_project(self.project, self.user)
-        options.historyprofiles = self.base.backend.get_history_profiles()
+        options.historyprofiles = set(self.base.backend.get_history_profiles())
         self.callback('DONE')
 
 class ProjectHandler(BaseHandler):
@@ -424,7 +438,7 @@ class HistoryProcess(BaseHandler):
         self.application.linkHolder.set(user["id"], "running", 1)
         self.application.linkHolder.set(user["id"], "stage", "parents")
         if not options.historyprofiles:
-            options.historyprofiles = self.backend.get_history_profiles()
+            options.historyprofiles = set(self.backend.get_history_profiles())
         if not profile:
             profile = user["id"]
         args = {"user": user, "base": self, "profile": profile, "master": master}
@@ -442,6 +456,7 @@ class HistoryWorker(threading.Thread):
     rootprofile = None
     master = None
     cookie = None
+    family_root = []
     def __init__(self, callback=None, *args, **kwargs):
         self.user = args[0]["user"]
         self.base = args[0]["base"]
@@ -457,55 +472,22 @@ class HistoryWorker(threading.Thread):
         rootprofile = self.rootprofile
         if not rootprofile:
             rootprofile = profile
-        gen = 0
+        gen = 1
         self.setGeneration(gen)
         family = self.base.backend.get_family(rootprofile, self.user)
-        family_group = family.get_family_branch()
-        result = self.checkmatch(family_group)
-        if len(result) > 0:
-            for person in result:
-                match = family.get_profile(person, gen)
-                self.cookie.add_matches(profile, match)
-        self.cookie.set(profile, "count", len(family_group))
-        gen += 1
-        self.setGeneration(gen)
-        family_root = family.get_parents()
-        while len(family_root) > 0:
-            done = self.checkdone()
-            if done:
-                break
-            parent_list = []
-            for relative in family_root:
-                done = self.checkdone()
-                if done:
-                    break
-                family = self.base.backend.get_family(relative, self.user)
-                family_group = family.get_family_branch()
-                result = self.checkmatch(family_group)
-                if len(result) > 0:
-                    for person in result:
-                        match = family.get_profile(person, gen)
-                        if not "child" in match["relation"] and not "spouse" in match["relation"]:
-                            match["mp"] = False
-                            match["name"] = self.base.backend.get_profile_name_db(person)
-                            match["projects"] = self.base.backend.get_projects(person)
-                            self.cookie.add_matches(profile, match)
-                if self.master:
-                    ismaster = self.base.backend.get_master(family_group, self.user)
-                    if len(ismaster) > 0:
-                        for person in ismaster:
-                                match = family.get_profile(person, gen)
-                                match["mp"] = True
-                                match["projects"] = [None]
-                                self.cookie.add_matches(profile, match)
-                count = int(self.cookie.get(profile, "count")) + len(family_group)
-                self.cookie.set(profile, "count", count)
-                parent_list.extend(family.get_parents())
-            family_root = parent_list
+        self.family_root = family.get_parents()
+        self.cookie.set(profile, "count", len(self.family_root))
+        while len(self.family_root) > 0:
+            root = []
+            root.extend(self.family_root)
+            self.family_root = []
+            self.threadme(root, gen, 3, 10)
             gen += 1
             self.setGeneration(gen)
         self.cookie.set(profile, "running", 0)
         self.callback('DONE')
+
+
 
     def checkdone(self):
         if (self.cookie.get(self.user["id"], "running") == 0):
@@ -552,6 +534,76 @@ class HistoryWorker(threading.Thread):
             if item in options.historyprofiles:
                 match.append(item)
         return match
+
+    def threadme(self, family_root, gen, threadlimit=None, idlimit=10, timeout=0.05):
+        assert threadlimit > 0, "need at least one thread";
+        printlock = threading.Lock()
+        threadpool = []
+
+        # keep going while work to do or being done
+        while family_root or threadpool:
+            done = self.checkdone()
+            if done:
+                break
+            parent_list = []
+            # while there's room, remove source files
+            # and add to the pool
+            while family_root and (threadlimit is None or len(threadpool) < threadlimit):
+                i = idlimit
+                sub_root = []
+                while i > 0:
+                    sub_root.append(family_root.pop())
+                    if len(family_root) > 0:
+                        i -= 1
+                    else:
+                        i = 0
+                wrkr = SubWorker(self, sub_root, gen, printlock)
+                wrkr.start()
+                threadpool.append(wrkr)
+
+            # remove completed threads from the pool
+            for thr in threadpool:
+                thr.join(timeout=timeout)
+                if not thr.is_alive():
+                    threadpool.remove(thr)
+        #print("all threads are done")
+
+class SubWorker(threading.Thread):
+    def __init__(self, root, family_list, gen, printlock,**kwargs):
+        super(SubWorker,self).__init__(**kwargs)
+        self.family_list = family_list
+        self.root = root
+        self.gen = gen
+        self.lock = printlock # so threads don't step on each other's prints
+
+    def run(self):
+        #with self.lock:
+        profile = self.root.user["id"]
+        the_group = self.root.base.backend.get_family_group(self.family_list, self.root.user)
+        if the_group:
+            for this_family in the_group:
+                rematch = None
+                done = self.root.checkdone()
+                if done:
+                    break
+                relatives = this_family.get_family_branch_group()
+                for relative in relatives:
+                    if relative.get_id() in options.historyprofiles:
+                        projects = self.root.base.backend.get_projects(relative.get_id())
+                        match = {"id": relative.get_id(), "relation": relative.get_rel(self.gen), "name": relative.get_name(), "mp": False, "projects": projects}
+                        rematch = self.root.cookie.add_matches(profile, match)
+                    elif self.root.master and relative.is_master():
+                        projects = [None]
+                        match = {"id": relative.get_id(), "relation": relative.get_rel(self.gen), "name": relative.get_name(), "mp": True, "projects": projects}
+                        rematch = self.root.cookie.add_matches(profile, match)
+                count = int(self.root.cookie.get(profile, "count")) + len(relatives)
+                self.root.cookie.set(profile, "count", count)
+                parents = this_family.get_parents()
+                history =  self.root.cookie.get_history(profile)
+                for parent in parents:
+                    if not rematch and parent not in history:
+                        self.root.family_root.append(parent)
+            self.root.cookie.add_history(profile, self.root.family_root)
 
 class LoginHandler(BaseHandler):
     @tornado.web.asynchronous
@@ -627,7 +679,7 @@ class LogoutHandler(BaseHandler):
         access_token = user["access_token"]
         urllib2.urlopen("https://www.geni.com/platform/oauth/invalidate_token?" + urllib.urlencode({
             "access_token": access_token
-            }))
+        }))
         self.redirect("http://www.geni.com")
 
 class GeniCanvasHandler(HomeHandler):
@@ -654,6 +706,10 @@ class Backend(object):
     def get_family(self, profile, user):
         geni = self.get_API(user)
         return geni.get_family(profile)
+
+    def get_family_group(self, family_root, user):
+        geni = self.get_API(user)
+        return geni.get_family_group(family_root)
 
     def get_master(self, profiles, user):
         geni = self.get_API(user)
@@ -769,7 +825,7 @@ class Backend(object):
             projects = self.db.query("SELECT links.project_id, projects.name FROM links, projects WHERE links.project_id=projects.id AND links.profile_id = %s", id)
         projectlist = []
         for item in projects:
-           projectlist.append({"id": item["project_id"], "name": item["name"]})
+            projectlist.append({"id": item["project_id"], "name": item["name"]})
         return projectlist
 
     def get_profile_count(self):
