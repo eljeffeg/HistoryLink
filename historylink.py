@@ -589,7 +589,8 @@ class SubWorker(threading.Thread):
                 relatives = this_family.get_family_branch_group()
                 for relative in relatives:
                     if relative.get_id() in options.historyprofiles:
-                        projects = self.root.base.backend.get_projects(relative.get_id())
+                        with self.lock:
+                            projects = self.root.base.backend.get_projects(relative.get_id())
                         match = {"id": relative.get_id(), "relation": relative.get_rel(self.gen), "name": relative.get_name(), "mp": False, "projects": projects}
                         rematch = self.root.cookie.add_matches(profile, match)
                     elif self.root.master and relative.is_master():
