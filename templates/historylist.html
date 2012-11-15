@@ -9,7 +9,7 @@
             {% if idx > 0 %}
             <br/>
             {% end %}
-            {% if project %}<a href='http://www.geni.com/{{project["id"]}}'>{{project["name"]}}</a>{% else %}Master Profile{% end %}
+            {% if project %}<a href='http://www.geni.com/{{project["id"]}}'>{{project["name"]}}</a>{% else %}{{item["message"]}}{% end %}
             {% end %}
         </td></tr>
 </table>

@@ -4,10 +4,11 @@
 <script type="text/javascript" src="/static/js/downloadify.min.js"></script>
 <script language="javascript" type="text/javascript">
     var running = false;
-    window.onload=function() {
-        Downloadify.create('downloadify',{
-            filename: 'HistoryLink.htm',
-            data: function(){
+    window.onload = function () {
+        handleChange();
+        Downloadify.create('downloadify', {
+            filename:'HistoryLink.htm',
+            data:function () {
                 source = "<html><style media='screen' type='text/css'>.separator { border-top: 1px solid rgba(0, 0, 0, 0.2); " +
                         "border-bottom: 1px solid rgba(255, 255, 255, 0.2); margin:0.5em 0;} body, input, textarea, td, button {" +
                         "font: 13px/18px 'Open Sans', 'HelveticaNeue', 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #333;}</style>" +
@@ -22,15 +23,15 @@
                         document.getElementById("pdfcontainer").innerHTML + "</div></center></body></html>"
                 return source;
             },
-            swf: '/static/media/downloadify.swf',
-            downloadImage: '/static/images/download3.png',
-            width: 154,
-            height: 56,
-            transparent: true,
-            append: false
+            swf:'/static/media/downloadify.swf',
+            downloadImage:'/static/images/download3.png',
+            width:154,
+            height:56,
+            transparent:true,
+            append:false
         });
     }
-    window.onunload=function() {
+    window.onunload = function () {
         $.post('/historycount');
     }
     function getBase64Image(img) {
@@ -51,7 +52,7 @@
 
         return dataURL.replace(/^data:image\/(png|jpg);base64,/, "");
     }
-    setInterval(function(){
+    setInterval(function () {
         if (running) {
             $('#historycount').load('/historycount');
         }
@@ -60,46 +61,91 @@
         running = false;
         document.getElementById("processing").innerHTML = '';
         var statusval = document.getElementById("statustext").innerHTML;
-        document.getElementById("statustext").innerHTML = statusval.replace("Researching","Researched");
+        document.getElementById("statustext").innerHTML = statusval.replace("Researching", "Researched");
         $.post('/historycount');
     }
     function runHistory() {
         if (running == false) {
+            masterval = document.getElementById("mastercheck").checked;
+            projectval = document.getElementById("projectcheck").checked;
+            problemval = document.getElementById("problemcheck").checked;
+            if (masterval == false && projectval == false && problemval == false) {
+                alert("No search options are selected.");
+                return
+            }
             running = true
             document.getElementById("processing").innerHTML = '<center><img src="/static/images/processing.gif" style="margin-bottom: -23px;"></center>';
             //requestInventory();
             //$('#historylist').load('/historylist');
             document.getElementById("historylistresults").innerHTML = "";
-            masterval = document.getElementById("master").checked;
             $('#historycount').load('/historycount?status=start');
-            $.get('/historyprocess', {"profile": "{{userid}}", "master": masterval});
+            $.get('/historyprocess', {"profile":"{{userid}}", "master":masterval, "project":projectval, "problem":problemval});
         }
     }
     function updateHistory() {
         var hresult = "";
-        $.get('/historylist', function(data) {
+        $.get('/historylist', function (data) {
             document.getElementById("historylistresults").innerHTML = data;
         });
     }
     function changeUser() {
-        $('.slideDown').slideToggle();
+        $('.slideDownUser').slideToggle();
+    }
+    function changeOptions() {
+        $('.slideDownOptions').slideToggle();
     }
     function masterHelp() {
-        $('.slideDown2').slideToggle();
+        $('.slideDownProject').slideUp();
+        $('.slideDownProblem').slideUp();
+        $('.slideDownMaster').slideToggle();
     }
-    function handleChange(cb) {
-        if (cb.checked) {
-            document.getElementById("mpnote").style.display = "inline";
+    function projectHelp() {
+        $('.slideDownProblem').slideUp();
+        $('.slideDownMaster').slideUp();
+        $('.slideDownProject').slideToggle();
+    }
+    function problemHelp() {
+        $('.slideDownProject').slideUp();
+        $('.slideDownMaster').slideUp();
+        $('.slideDownProblem').slideToggle();
+    }
+    function handleChange() {
+        master = document.getElementById("mastercheck");
+        project = document.getElementById("projectcheck");
+        problem = document.getElementById("problemcheck");
+        note = ""
+        if (project.checked) {
+            document.getElementById("projecticon").style.display = "inline";
+            note = "Projects";
         } else {
-            document.getElementById("mpnote").style.display = "none";
+            document.getElementById("projecticon").style.display = "none";
         }
+        if (master.checked) {
+            if (note.length > 0) {
+                note += " / ";
+            }
+            note += "Masters";
+            document.getElementById("mastericon").style.display = "inline";
+        } else {
+            document.getElementById("mastericon").style.display = "none";
+        }
+        if (problem.checked) {
+            if (note.length > 0) {
+                note += " / ";
+            }
+            note += "Problems";
+            document.getElementById("problemicon").style.display = "inline";
+        } else {
+            document.getElementById("problemicon").style.display = "none";
+        }
+        document.getElementById("hitnote").innerHTML = note;
     }
     function submitProfile() {
         var profile_id = document.getElementById("userfield").value.toString();
         if (profile_id.length > 0) {
             if (profile_id.indexOf("/") != -1) {
                 //Grab the GUID from a URL
-                profile_id = "profile-g" + profile_id.substring(profile_id.lastIndexOf('/')+1);
+                profile_id = "profile-g" + profile_id.substring(profile_id.lastIndexOf('/') + 1);
             }
             if (profile_id.indexOf("?") != -1) {
                 //In case the copy the profile url by navigating through another 6000000002107278790?through=6000000010985379345
@@ -107,7 +153,7 @@
             }
             if (profile_id.indexOf("#") != -1) {
                 //In case the copy the profile url by navigating in tree view 6000000001495436722#6000000010985379345
-                profile_id = "profile-g" + profile_id.substring(profile_id.lastIndexOf('#')+1, profile_id.length);
+                profile_id = "profile-g" + profile_id.substring(profile_id.lastIndexOf('#') + 1, profile_id.length);
             }
             if (profile_id.indexOf("profile-") != -1) {
                 window.location.href = "/history?profile=" + profile_id;
@@ -117,36 +163,179 @@
         }
         return
     }
+    function entsub(e, form) {
+        var key = e.keyCode || e.which;
+        if (key == 13) {
+            submitProfile();
+        }
+    }
 </script>
 <br/><br/>
 <div class="shadoweffect-business">
-    Note: The <a href="http://www.geni.com/platform/developer/" target="_blank">Geni API</a> limits applications (this website for all users) to 40 queries every 10 seconds.
-    Since investigating your tree history (and others) could involve <a href="https://www.youtube.com/watch?v=BhtgINeaJWg&feature=share" target="_blank">exponential queries</a>, please be patient.  The page will update automatically with progress every 5 seconds.
+    Note: The <a href="http://www.geni.com/platform/developer/" target="_blank">Geni API</a> limits applications (this
+    website for all users) to 40 queries every 10 seconds.
+    Since investigating your tree history (and others) could involve <a
+        href="https://www.youtube.com/watch?v=BhtgINeaJWg&feature=share" target="_blank">exponential queries</a>, please
+    be patient. The page will update automatically with progress every 5 seconds.
     <br/><br/>
-    While it is common to be related to the same ancestor via different pathways, HistoryLink will only report an ancestor once.  <a href="https://www.geni.com/account_settings/premium_account">Geni Pro</a> members can view the step-by-step pathway to those ancestors.
+    While it is common to be related to the same ancestor via different pathways, HistoryLink will only report an
+    ancestor once. <a href="https://www.geni.com/account_settings/premium_account">Geni Pro</a> members can view the
+    step-by-step pathway to those ancestors.
 </div>
 <br/>
 <center>
-    <div style="margin-left: 32px;"><h1>History Link for {{username}}<img src="/static/images/user1.png" style='margin-bottom: -3px; padding-left: 2px; cursor:pointer;' onclick='changeUser()' title="Change Focus Person" alt="Change Focus Person"></h1></div>
-    <div style="margin-top: 10px;"><table><tr><td style="padding-top: 3px;"><input type="checkbox" id="master" onchange='handleChange(this);'></td><td valign="center" style="padding-bottom: 2px;">Include <a href="http://wiki.geni.com/index.php/Master_Profile" target="_blank">Master Profiles</a> in Search Results
-        <img src="/static/images/masterhelp.png" style="padding-left: 1px; margin-bottom: 2px; cursor:pointer;" title="Master Profile Tip" alt="Master Profile Tip" onclick='masterHelp()'></td></tr></table></div>
-    <div class="slideDown2" style="display: none; font-size: x-small; min-width: 380px; max-width:650px; text-align: left;">The designation of Master Profile can be a weak association to historical significance.  It is an indication of quality and often a common profile for joining family trees (merges).
-        Including Master Profiles in search results may find profiles that have not yet been included in our projects, but could also produce many false positives for historic notability.</div>
-    <div style="margin-top: 10px; margin-bottom: -6px;"><div class="slideDown" style="display: none; padding-bottom: 15px;"><input style="height: 24px; width: 200px;" id="userfield" onkeypress="entsub(event,this.form);" /><button style="margin-left: 8px;" onclick="submitProfile();">Change Person</button></div></div>
-    <table><tr><td>
-        <div style="display:block; margin-top: 8px;  padding-left: 15px; padding-right: 10px;">
-            <button align="MIDDLE" onClick="runHistory();" class="cta cta-green">Start Search</button></div>
-    </td>
-        <td>
-            <div style="display:block; margin-top: 8px; padding-left: 10px; padding-right: 10px;">
-                <button align="MIDDLE" onClick="stopHistory();" class="cta cta-red">Stop Search</button></div>
-        </td>
-        <td>
-            <div id="downloadify" style="display:block; margin-top: 10px; padding-left: 7px;">
-                <button valign="top" onClick="alert('You must have Flash installed to download this file.');" class="cta cta-blue">Save To Disk</button></div>
+    <div style="margin-left: 32px;"><h1>History Link for {{username}}<img src="/static/images/user1.png"
+                                                                          style='margin-bottom: -3px; padding-left: 2px; cursor:pointer;'
+                                                                          onclick='changeUser()'
+                                                                          title="Change Focus Person"
+                                                                          alt="Change Focus Person"></h1>
+    </div>
+    <div style="margin-top: 15px; margin-bottom: -6px;">
+        <div class="slideDownUser" style="display: none; padding-bottom: 15px;"><input
+                style="height: 24px; width: 200px;"
+                id="userfield"
+                onkeypress="entsub(event,this.form);"/>
+            <button style="margin-left: 8px;" onclick="submitProfile();">Change Person</button>
+        </div>
+    </div>
+    <div>
+        <table>
+            <tr>
+                <td>
+                    <img src="/static/images/admin.png" style='margin-top: 2px;margin-right: 3px;cursor:pointer;'
+                         onclick='changeOptions()'
+                         title="Change Search Options"
+                         alt="Change Search Options"></td>
+                <td valign="center" style="cursor:pointer; padding-right: 5px;" onclick='changeOptions()'><strong>Change
+                    the Search
+                    Options</strong>
+                </td>
+                <td style="cursor:pointer; padding-left:3px;" onclick='changeOptions()'>
+                    <span class='ctaadd ctaadd-lightgray'>
+                        <span style="display: inline-block;"></span>
+                        <span id="projecticon" style="padding-left: 2px; padding-right: 2px;"><img
+                                src="/static/images/project.png" style="margin-bottom: -3px;" alt="Project Profiles"
+                                title="Project Profiles"></span>
+                        <span id="mastericon" style="padding-left: 2px; padding-right: 2px; display: none;"><img
+                                src="/static/images/masterprofile.png" style="margin-bottom: -3px;"
+                                alt="Master Profiles" title="Master Profiles"></span>
+                        <span id="problemicon" style="padding-left: 2px; padding-right: 2px; display: none;"><img
+                                src="/static/images/warning.png" style="margin-bottom: -3px;" alt="Problem Profiles"
+                                title="Problem Profiles"></span>
+                        <span style="display: inline-block;"></span>
+                    </span>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div id="searchoptions" class="slideDownOptions" style="display: none;">
+        <table class="shadoweffect-business" style="margin-top: 2px;">
+            <tr>
+                <td><img src="/static/images/project.png" style="margin-bottom: -3px; padding-right: 1px;"></td>
+                <td style="padding-top: 1px;"><input type="checkbox" id="projectcheck" checked="true"
+                                                     onchange='handleChange();'></td>
+                <td valign="center" style="padding-bottom: 2px;">Include <a
+                        href="http://wiki.geni.com/index.php/Projects" target="_blank">Project Profiles</a> in
+                    Search Results
+                </td>
+                <td align="right">
+                    <img src="/static/images/help.png"
+                         style="padding-left: 3px; margin-bottom: -3px; cursor:pointer;" title="Project Profile Tip"
+                         alt="Project Profile Tip" onclick='projectHelp()'></td>
+            </tr>
+            <tr>
+                <td colpsan='4' style="padding-top: 4px;"></td>
+            </tr>
+            <tr>
+                <td><img src="/static/images/masterprofile.png" style="margin-bottom: -3px; padding-right: 1px;"></td>
+                <td style="padding-top: 1px;"><input type="checkbox" id="mastercheck"
+                                                     onchange='handleChange();'></td>
+                <td valign="center" style="padding-bottom: 2px;">Include <a
+                        href="http://wiki.geni.com/index.php/Master_Profile" target="_blank">Master Profiles</a> in
+                    Search Results
+                </td>
+                <td align="right">
+                    <img src="/static/images/help.png"
+                         style="padding-left: 3px; margin-bottom: -3px; cursor:pointer;" title="Master Profile Tip"
+                         alt="Master Profile Tip" onclick='masterHelp()'></td>
+            </tr>
+            <tr>
+                <td colpsan='4' style="padding-top: 4px;"></td>
+            </tr>
+            <tr>
+                <td><img src="/static/images/warning.png" style="margin-bottom: -2px; padding-right: 1px;"></td>
+                <td style="padding-top: 1px;"><input type="checkbox" id="problemcheck" onchange='handleChange();'>
+                </td>
+                <td valign="center" style="padding-bottom: 2px;">Include Problem Profiles in
+                    Search Results
+                </td>
+                <td align="right">
+                    <img src="/static/images/help.png"
+                         style="padding-left: 3px; margin-bottom: -3px; cursor:pointer;" title="Problem Profile Tip"
+                         alt="Problem Profile Tip" onclick='problemHelp()'></td>
+            </tr>
+        </table>
+        <div style="margin-top: 10px;">
+            <div class="slideDownProject"
+                 style="display: none; font-size: x-small; min-width: 380px; max-width:650px; text-align: left;">
+                <strong>Project
+                    Profiles: </strong>These profiles belong to a <a href="http://wiki.geni.com/index.php/Projects"
+                                                                     target="_blank">Geni
+                Project</a> and usually indicate historical notability. HistoryLink will use the
+                projects <a href="/projects">listed in this application</a> for comparison, which can be
+                expanded by the
+                users. Future developments of the Geni API may eliminate the requirement for our own project list.
             </div>
-        </td>
-    </tr></table>
+            <div class="slideDownMaster"
+                 style="display: none; font-size: x-small; min-width: 380px; max-width:650px; text-align: left;">
+                <strong>Master
+                    Profiles: </strong>The designation
+                of <a href="http://wiki.geni.com/index.php/Master_Profile" target="_blank">Master Profile</a> can be a
+                weak association
+                to historical significance. It is an indication of quality
+                and often a common profile for joining family trees
+                (<a href="http://wiki.geni.com/index.php/Profile_merging" target="_blank">merges</a>). Including Master
+                Profiles in
+                search results may find profiles that have not yet been included in our projects, but could also produce
+                many false positives for historic notability.
+            </div>
+            <div class="slideDownProblem"
+                 style="display: none; font-size: x-small; min-width: 380px; max-width:650px; text-align: left;">
+                <strong>Problem
+                    Profiles: </strong>This option can be helpful for curators looking to identify <a
+                    href="http://wiki.geni.com/index.php/Zombie" target="_blank">Zombies</a> and <a
+                    href="http://wiki.geni.com/index.php/Private_Profile" target="_blank">Private</a> profiles that
+                should be <a
+                    href="http://wiki.geni.com/index.php/Public_Profile" target="_blank">Public</a>.
+                Future options may include adding some basic data validation for common genealogy problems
+                that usually indicate bad data, such as people living past a certain number of years, number of children
+                attributed to a couple being larger than a certain threshold, or children's birth dates that occur after
+                the parent's birth date.
+            </div>
+        </div>
+    </div>
+    <table>
+        <tr>
+            <td>
+                <div style="display:block; margin-top: 8px;  padding-left: 15px; padding-right: 10px;">
+                    <button align="MIDDLE" onClick="runHistory();" class="cta cta-green">Start Search</button>
+                </div>
+            </td>
+            <td>
+                <div style="display:block; margin-top: 8px; padding-left: 10px; padding-right: 10px;">
+                    <button align="MIDDLE" onClick="stopHistory();" class="cta cta-red">Stop Search</button>
+                </div>
+            </td>
+            <td>
+                <div id="downloadify" style="display:block; margin-top: 10px; padding-left: 7px;">
+                    <button valign="top" onClick="alert('You must have Flash installed to download this file.');"
+                            class="cta cta-blue">Save To Disk
+                    </button>
+                </div>
+                </div>
+            </td>
+        </tr>
+    </table>
 
     <br/>
 </center>
@@ -156,7 +345,12 @@
         <div id="historycount"></div>
         <div id="processing"></div>
         <div id="pdfcontainer">
-            <div style="margin-left: 1px; float: left;"><strong>Ancestors</strong></div><div style="margin-right: 3px; float: right;"><strong>Projects<div id="mpnote" style="display: none;"> / MP</div></strong></div><br/><hr/>
+            <div style="margin-left: 1px; float: left;"><strong>Ancestors</strong></div>
+            <div style="margin-right: 3px; float: right;">
+                <strong><span id="hitnote">Projects</span></strong>
+            </div>
+            <br/>
+            <hr/>
             <div id="historylistresults"></div>
         </div>
     </div>

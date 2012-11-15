@@ -150,7 +150,7 @@ class LinkHolder(object):
             if items["id"] == profile["id"]:
                 #Give more weight to parents over aunts/uncles
                 exists = True
-                if profile["mp"]:
+                if profile["message"]:
                     pass
                 elif "aunt" in profile["relation"]:
                     pass
@@ -199,6 +199,7 @@ class LinkHolder(object):
 
     def get(self, id, key):
         if id in self.cookie:
+
             if key in self.cookie[id]:
                 return self.cookie[id][key]
         if key == "count":
@@ -382,9 +383,9 @@ class HistoryList(BaseHandler):
         showmatch = len(matches) - hits
         i = 1
         for item in matches:
-            if item["mp"]:
+            if item["message"]:
                 if (i > showmatch):
-                    logging.info(" *** MP Match for " +  str(user["name"]) + " on " + item["id"] + ": " + item["name"])
+                    logging.info(" *** " + str(item["message"]) + " Match for " +  str(user["name"]) + " on " + item["id"] + ": " + item["name"])
             else:
                 if (i > showmatch):
                     logging.info(" *** Project Match for " +  str(user["name"]) + " on " + item["id"] + ": " + item["name"])
@@ -431,8 +432,14 @@ class HistoryProcess(BaseHandler):
     def get(self):
         profile = self.get_argument("profile", None)
         master = self.get_argument("master", None)
+        project = self.get_argument("project", True)
+        problem = self.get_argument("problem", None)
         if master == "false":
             master = None
+        if problem == "false":
+            problem = None
+        if project == "false":
+            project = None
         user = self.current_user
         self.application.linkHolder.set(user["id"], "count", 0)
         self.application.linkHolder.set(user["id"], "running", 1)
@@ -441,7 +448,7 @@ class HistoryProcess(BaseHandler):
             options.historyprofiles = set(self.backend.get_history_profiles())
         if not profile:
             profile = user["id"]
-        args = {"user": user, "base": self, "profile": profile, "master": master}
+        args = {"user": user, "base": self, "profile": profile, "master": master, "project": project, "problem": problem}
         HistoryWorker(self.worker_done, args).start()
 
     def worker_done(self, value):
@@ -455,6 +462,8 @@ class HistoryWorker(threading.Thread):
     base = None
     rootprofile = None
     master = None
+    problem = None
+    project = None
     cookie = None
     family_root = []
     def __init__(self, callback=None, *args, **kwargs):
@@ -462,6 +471,8 @@ class HistoryWorker(threading.Thread):
         self.base = args[0]["base"]
         self.rootprofile = args[0]["profile"]
         self.master = args[0]["master"]
+        self.project = args[0]["project"]
+        self.problem = args[0]["problem"]
         self.cookie = self.base.application.linkHolder
         args = {}
         super(HistoryWorker, self).__init__(*args, **kwargs)
@@ -472,11 +483,10 @@ class HistoryWorker(threading.Thread):
         rootprofile = self.rootprofile
         if not rootprofile:
             rootprofile = profile
-        gen = 1
-        self.setGeneration(gen)
         family = self.base.backend.get_family(rootprofile, self.user)
         self.family_root = family.get_parents()
-        self.cookie.set(profile, "count", len(self.family_root))
+        gen = 1
+        self.setGeneration(gen)
         while len(self.family_root) > 0:
             root = []
             root.extend(self.family_root)
@@ -588,15 +598,20 @@ class SubWorker(threading.Thread):
                     break
                 relatives = this_family.get_family_branch_group()
                 for relative in relatives:
-                    if relative.get_id() in options.historyprofiles:
+                    if self.root.project and relative.get_id() in options.historyprofiles:
                         with self.lock:
                             projects = self.root.base.backend.get_projects(relative.get_id())
-                        match = {"id": relative.get_id(), "relation": relative.get_rel(self.gen), "name": relative.get_name(), "mp": False, "projects": projects}
+                        match = {"id": relative.get_id(), "relation": relative.get_rel(self.gen), "name": relative.get_name(), "message": False, "projects": projects}
                         rematch = self.root.cookie.add_matches(profile, match)
                     elif self.root.master and relative.is_master():
                         projects = [None]
-                        match = {"id": relative.get_id(), "relation": relative.get_rel(self.gen), "name": relative.get_name(), "mp": True, "projects": projects}
+                        match = {"id": relative.get_id(), "relation": relative.get_rel(self.gen), "name": relative.get_name(), "message": "Master Profile", "projects": projects}
                         rematch = self.root.cookie.add_matches(profile, match)
+                    elif self.root.problem and relative.get_message():
+                        projects = [None]
+                        match = {"id": relative.get_id(), "relation": relative.get_rel(self.gen), "name": relative.get_name(), "message": relative.get_message(), "projects": projects}
+                        self.root.cookie.add_matches(profile, match)
+                        rematch = True
                 count = int(self.root.cookie.get(profile, "count")) + len(relatives)
                 self.root.cookie.set(profile, "count", count)
                 parents = this_family.get_parents()

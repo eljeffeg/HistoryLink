@@ -94,24 +94,43 @@ class GeniAPI(object):
             for item in family_group["results"]:
                 family = Family("profile", item)
                 family_list.append(family)
+        elif family_group and "nodes" in family_group:
+            family = Family("profile", family_group)
+            family_list.append(family)
         else:
-            try:
-                logging.warning("**** No results? ****")
-                family = Family("profile", family_group)
-                family_list.append(family)
-            except:
-                pass
+            logging.warning("**** No results ****")
+            logging.warning(family_group)
         return family_list
 
     def get_family_group(self, family_root):
-        ids = "?ids="
+        query = "profile/immediate-family"
+        ids = ""
         while len(family_root) > 0:
             ids += family_root.pop() + ","
         ids = ids[:-1]
         args = {"ids": ids, "fields": "id,name,gender,master_profile"}
-        query = "profile/immediate-family"
         family_group = self.request(query, args)
-        return self.process_group(family_group)
+        if "error" not in family_group:
+            result = self.process_group(family_group)
+        else:
+            if "message" in family_group["error"]:
+                if "Access Denied" == family_group["error"]["message"]:
+                    newlist = []
+                    startlist = ids.split(",")
+                    if len(startlist) == 1:
+                        relative = self.get_profile(startlist[0])
+                        if "public" in relative:
+                            if relative["public"] == False:
+                                return [Family("profile", relative, "Access Denied")]
+                            else:
+                                return []
+                        else:
+                            return []
+                    idlist = [startlist[i::2] for i in range(2)]
+                    for family_root in idlist:
+                        newlist.extend(self.get_family_group(family_root))
+                    result = newlist
+        return result
 
     def get_parents(self, profile):
         family = self.get_family(profile)
@@ -212,13 +231,35 @@ class GeniAPI(object):
             file = urllib2.urlopen("https://www.geni.com/api/" + path + "?" +
                                    urllib.urlencode(args), post_data)
         except urllib2.HTTPError, e:
-            time.sleep(3)
-            try:
-                file = urllib2.urlopen("https://www.geni.com/api/" + path + "?" +
-                                       urllib.urlencode(args), post_data)
-            except urllib2.HTTPError, e:
-                response = _parse_json(e.read())
-                logging.warning("***** " + path + " *****")
+            response = _parse_json(e.read())
+            if "error" in response and "message" in response["error"]:
+                message = response["error"]["message"]
+                if "Rate limit exceeded." == message:
+                    i = 3 #Try it 3 times
+                    while message == "Rate limit exceeded." and i > 0:
+                        time.sleep(3)
+                        i -= 1
+                        try:
+                            file = urllib2.urlopen("https://www.geni.com/api/" + path + "?" +
+                                                   urllib.urlencode(args), post_data)
+                            message = "Pass"
+                        except:
+                            response = _parse_json(e.read())
+                            if "error" in response and "message" in response["error"]:
+                                message = response["error"]["message"]
+                            else:
+                                message = "error"
+                                logging.warning("***** " + path + "?" + urllib.urlencode(args) + " *****")
+                                logging.warning(response)
+                            file = None
+                elif "Access Denied" == message:
+                    file = None
+                else:
+                    logging.warning("***** " + path + "?" + urllib.urlencode(args) + " *****")
+                    logging.warning(response)
+                    file = None
+            else:
+                logging.warning("***** " + path + "?" + urllib.urlencode(args) + " *****")
                 logging.warning(response)
                 file = None
 
@@ -276,42 +317,52 @@ class Project(object):
 
 
 class Family(object):
-    def __init__(self, focus, response):
-        if "profile" == focus:
-            self.focus = response["focus"]["id"]
-        else:
-            self.focus = focus
-        self.response = response
+    def __init__(self, focus, response, error=None):
         self.unions = []
         self.family = []
-        if not "nodes" in response:
-            return
-        for item in response["nodes"]:
-            if (str(item).startswith("union")):
-                union = Union(str(item), response["nodes"][item])
-                if union:
-                    self.unions.append(union)
+        if error:
+            profile = None
+            name = None
+            if "id" in response:
+                profile = response["id"]
+            if "name" in response:
+                name = response["name"]
+            if profile:
+                relative = Relative(profile, name, "unknown", False, error)
+                if relative:
+                    self.family.append(relative)
+            else:
+                logging.warning('No id? ' + response)
+        else:
+            if "profile" == focus:
+                self.focus = response["focus"]["id"]
+            else:
+                self.focus = focus
+            if not "nodes" in response:
+                return
+            for item in response["nodes"]:
+                if (str(item).startswith("union")):
+                    union = Union(str(item), response["nodes"][item])
+                    if union:
+                        self.unions.append(union)
 
-        for item in response["nodes"]:
-            if (str(item).startswith("profile")):
-                if "gender" in response["nodes"][item]:
-                    gender = response["nodes"][item]["gender"]
-                else:
-                    gender = "Unknown"
-                master = False
-                name = None
-                if "master_profile" in response["nodes"][item]:
-                    master = True
-                if "name" in response["nodes"][item]:
-                    name = response["nodes"][item]["name"]
-                for edge in response["nodes"][item]["edges"]:
-                    rel = response["nodes"][item]["edges"][edge]["rel"]
-                    relative = self.process_unions(edge, item, rel, gender, name, master)
-                    if relative:
-                        self.family.append(relative)
-
-    def get_json(self):
-        return self.response
+            for item in response["nodes"]:
+                if (str(item).startswith("profile")):
+                    if "gender" in response["nodes"][item]:
+                        gender = response["nodes"][item]["gender"]
+                    else:
+                        gender = "Unknown"
+                    master = False
+                    name = None
+                    if "master_profile" in response["nodes"][item]:
+                        master = True
+                    if "name" in response["nodes"][item]:
+                        name = response["nodes"][item]["name"]
+                    for edge in response["nodes"][item]["edges"]:
+                        rel = response["nodes"][item]["edges"][edge]["rel"]
+                        relative = self.process_unions(edge, item, rel, gender, name, master)
+                        if relative:
+                            self.family.append(relative)
 
     def get_profile(self, profile, gen=0):
         relative = None
@@ -343,6 +394,8 @@ class Family(object):
             if rel == "parent" or rel == "father" or rel == "mother":
                 id = relative.get_id()
             elif rel == "sibling" or rel == "sister" or rel == "brother":
+                id = relative.get_id()
+            elif relative.get_message():
                 id = relative.get_id()
             if id:
                 relatives.append(relative)
@@ -402,11 +455,12 @@ class Family(object):
                 return item.get_edge(profile, self.focus, rel, gender, name, master)
 
 class Relative(object):
-    def __init__(self, id, name, relation, master=False):
+    def __init__(self, id, name, relation, master=False, message=False):
         self.id = id
         self.relation = relation
         self.master = master
         self.name = name
+        self.message = message
 
     def get_id(self):
         return self.id
@@ -416,6 +470,9 @@ class Relative(object):
 
     def is_master(self):
         return self.master
+
+    def get_message(self):
+        return self.message
 
     def get_rel(self, gen=0):
         if gen == 0:
@@ -440,7 +497,7 @@ class Relative(object):
             elif self.relation == "spouse":
                 newrel = "spouse"
             else:
-                newrel = "child"
+                newrel = "aunt/uncle/grandparent"
         prefix = ""
         gen -= 1
         if gen > 0:
