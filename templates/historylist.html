@@ -2,14 +2,14 @@
 <table style="width: 100%;">
     <tr>
         <td style="width: 50%" align="left">
-            <a href='http://www.geni.com/{{item["id"]}}'>{{item["name"]}}</a> is your {{item["relation"]}}<br/>
+            <a href='http://www.geni.com/{{item["id"]}}' target="_blank">{{item["name"]}}</a> is your {{item["relation"]}}<br/>
         </td>
         <td style="width: 50%" align="right">
             {% for idx,project in enumerate(item["projects"]) %}
             {% if idx > 0 %}
             <br/>
             {% end %}
-            {% if project %}<a href='http://www.geni.com/{{project["id"]}}'>{{project["name"]}}</a>{% else %}{{item["message"]}}{% end %}
+            {% if project %}<a href='http://www.geni.com/{{project["id"]}}' target="_blank">{{project["name"]}}</a>{% else %}{{item["message"]}}{% end %}
             {% end %}
         </td></tr>
 </table>

@@ -57,11 +57,20 @@
             $('#historycount').load('/historycount');
         }
     }, 5000);
+    function goHistory() {
+        if (running) {
+            stopHistory();
+        } else {
+            runHistory();
+        }
+    }
     function stopHistory() {
         running = false;
         document.getElementById("processing").innerHTML = '';
         var statusval = document.getElementById("statustext").innerHTML;
         document.getElementById("statustext").innerHTML = statusval.replace("Researching", "Researched");
+        document.getElementById("searchbutton").setAttribute("class", "cta cta-green");
+        document.getElementById("searchbutton").innerHTML = "Start Search";
         $.post('/historycount');
     }
     function runHistory() {
@@ -78,6 +87,8 @@
             //requestInventory();
             //$('#historylist').load('/historylist');
             document.getElementById("historylistresults").innerHTML = "";
+            document.getElementById("searchbutton").setAttribute("class", "cta cta-red");
+            document.getElementById("searchbutton").innerHTML = "Stop Search";
             $('#historycount').load('/historycount?status=start');
             $.get('/historyprocess', {"profile":"{{userid}}", "master":masterval, "project":projectval, "problem":problemval});
         }
@@ -317,13 +328,8 @@
     <table>
         <tr>
             <td>
-                <div style="display:block; margin-top: 8px;  padding-left: 15px; padding-right: 10px;">
-                    <button align="MIDDLE" onClick="runHistory();" class="cta cta-green">Start Search</button>
-                </div>
-            </td>
-            <td>
-                <div style="display:block; margin-top: 8px; padding-left: 10px; padding-right: 10px;">
-                    <button align="MIDDLE" onClick="stopHistory();" class="cta cta-red">Stop Search</button>
+                <div style="display:block; margin-top: 7px; padding-left: 15px; padding-right: 10px;">
+                    <button id="searchbutton" align="MIDDLE" onClick="goHistory();" class="cta cta-green">Start Search</button>
                 </div>
             </td>
             <td>

@@ -756,20 +756,6 @@ class Backend(object):
             return
         query = ""
         for item in projectprofiles:
-            try:
-                query += '("' + item["id"] + '","%s"),' % item["name"].replace('"', '')
-            except:
-                try:
-                    query += '("' + item["id"] + '","%s"),' % item["name"].encode('latin-1', 'replace').replace('"', '')
-                except:
-                    query += '("' + item["id"] + '","%s"),' % repr(item["name"]).replace('"', '')
-        query = "INSERT INTO profiles (id,name) VALUES " + query[:-1] + " ON DUPLICATE KEY UPDATE name=VALUES(name);"
-        try:
-            self.db.execute(query)
-        except:
-            self.db.execute(query)
-        query = ""
-        for item in projectprofiles:
             query += '(' + project_id + ',"' + item["id"] + '"),'
         query = "INSERT IGNORE INTO links (project_id,profile_id) VALUES " + query[:-1]
         try:
@@ -825,13 +811,13 @@ class Backend(object):
 
     def get_history_profiles(self):
         try:
-            profiles = self.db.query("SELECT id FROM profiles")
+            profiles = self.db.query("SELECT DISTINCT profile_id FROM links")
         except:
-            profiles = self.db.query("SELECT id FROM profiles")
+            profiles = self.db.query("SELECT DISTINCT profile_id FROM links")
         logging.info("Building history profile list.")
         profilelist = []
         for item in profiles:
-            profilelist.append(item["id"])
+            profilelist.append(item["profile_id"])
         return profilelist
 
     def get_projects(self, id):
@@ -848,24 +834,12 @@ class Backend(object):
         profilecount = None
         count = 0
         try:
-            profilecount = self.db.query("SELECT COUNT(id) FROM profiles")
+            profilecount = self.db.query("SELECT DISTINCT COUNT(profile_id) FROM links")
         except:
-            profilecount = self.db.query("SELECT COUNT(id) FROM profiles")
-        if profilecount and "COUNT(id)" in profilecount[0]:
-            count = "{:,.0f}".format(int(profilecount[0]["COUNT(id)"]))
+            profilecount = self.db.query("SELECT DISTINCT COUNT(profile_id) FROM links")
+        if profilecount and "COUNT(profile_id)" in profilecount[0]:
+            count = "{:,.0f}".format(int(profilecount[0]["COUNT(profile_id)"]))
         return count
-
-    def get_profile_name_db(self, profile):
-        if not profile:
-            return
-        name = None
-        try:
-            name = self.db.query("SELECT name FROM profiles WHERE id=%s", profile)
-        except:
-            name = self.db.query("SELECT name FROM profiles WHERE id=%s", profile)
-        if len(name) > 0:
-            return name[0]["name"]
-        return name
 
 class TimeConvert(tornado.web.UIModule):
     def render(self, dt):
