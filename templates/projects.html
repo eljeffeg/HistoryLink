@@ -20,12 +20,17 @@
                     $.post("/projectsubmit", {project: project_id}, function() {
                         document.getElementById("processing").innerHTML = '<br/><table><tr><td><img src="/static/images/checkmarkgreen20px.png" style="padding-right: 3px;"></td><td valign="top" style="padding-top: 1px;"><strong>Project ' + project_id + ' Added</strong></td></tr></table>';
                         document.getElementById("addbutton").disabled = false;
-                        $.get('/projectlist', function(data) {
-                            if (data != "DONE") {
-                                document.getElementById("projectlist").innerHTML = data;
-                            } else {
-                                //Try again
-                                $('#projectlist').load('/projectlist');
+                        $.ajax({
+                            url: "/projectlist",
+                            cache: false,
+                            dataType: "html",
+                            success: function(data) {
+                                if (data != "DONE") {
+                                    document.getElementById("projectlist").innerHTML = data;
+                                } else {
+                                    //Try again
+                                    $('#projectlist').load('/projectlist');
+                                }
                             }
                         });
                         window.setTimeout(function() {
@@ -61,6 +66,18 @@
 <div id="projectlist"></div>
 <script language="javascript" type="text/javascript">
     document.getElementById("addbutton").disabled = false;
-    $('#projectlist').load('/projectlist');
+    $.ajax({
+        url: "/projectlist",
+        cache: false,
+        dataType: "html",
+        success: function(data) {
+            if (data != "DONE") {
+                document.getElementById("projectlist").innerHTML = data;
+            } else {
+                //Try again
+                $('#projectlist').load('/projectlist');
+            }
+        }
+    });
 </script>
 {% end %}
