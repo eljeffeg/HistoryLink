@@ -1,22 +1,29 @@
 <div style="text-align: center; margin-bottom: -5px; padding-top: 5px;"><h2>HistoryLink Geni Projects</h2></div>
 <div style="padding-left: 8px; padding-bottom: 3px; float: left">ID: Name (profile count)</div><div style="padding-right: 8px; padding-bottom: 3px; text-align: right;">Total Profiles: {{count}}</div>
-<div class="shadoweffect-business" >
+<div class="shadoweffect-business" id="shadoweffect" >
     <table width="100%"><tr><td>
-{% for idx,item in enumerate(projects) %}
-    {% if idx == 0 %}
-    <div style="float: left; width: 50%; display: inline-block;">
-    <ul>
-    {% end %}
-    {% if idx == round((len(projects)/2)+.5) %}
-    </ul>
-    </div>
-    <div style="float: right; width: 50%;display: inline-block;">
-        <ul>
-    {% end %}
-        <li><font size="3" color="darkblue">•&nbsp;&nbsp;</font><a href='http://www.geni.com/project-{{item["id"]}}'>{{item["id"]}}:&nbsp;&nbsp;&nbsp;{{ item["name"] }} ({{item["count"]}})</a></li>
-    {% if idx == len(projects)-1 %}
-        </ul>
-    </div>
-    {% end %}
-{% end %}
+        {% for idx,item in enumerate(projects) %}
+        {% if idx == 0 %}
+        <div style="float: left; width: 50%; display: inline-block;">
+            <ul>
+                {% end %}
+                {% if idx == round((len(projects)/2)+.5) %}
+            </ul>
+        </div>
+        <div style="float: right; width: 50%;display: inline-block;">
+            <ul>
+                {% end %}
+                <li><font size="3" color="darkblue">•&nbsp;&nbsp;</font><a href='http://www.geni.com/project-{{item["id"]}}' target="_blank">{{item["id"]}}:&nbsp;&nbsp;&nbsp;{{ item["name"] }} ({{item["count"]}})</a></li>
+                {% if idx == len(projects)-1 %}
+            </ul>
+        </div>
+        {% end %}
+        {% end %}
     </td></tr></table>
+</div>
+<script language="javascript" type="text/javascript">
+    var canvas = window.top.document.getElementById("app_content_frame");
+    if (canvas != null) {
+        canvas.style.height = document.getElementById("SiteContainer").offsetHeight + "px";
+    }
+</script>

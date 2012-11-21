@@ -105,6 +105,7 @@ class GeniAPI(object):
     def get_family_group(self, family_root):
         query = "profile/immediate-family"
         ids = ""
+        result = []
         while len(family_root) > 0:
             ids += family_root.pop() + ","
         ids = ids[:-1]

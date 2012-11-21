@@ -20,7 +20,7 @@
                         "border-radius: 6px; -moz-border-radius: 6px; padding:15px; position: relative; z-index: 3; " +
                         "margin: auto; width: 100%; max-width: 950px; margin-top: -12px; margin-bottom: 25px;'>" +
                         document.getElementById("statustext").innerHTML + "<br/>" +
-                        document.getElementById("pdfcontainer").innerHTML + "</div></center></body></html>"
+                        document.getElementById("pdfcontainer").innerHTML + "</div></center></body></html>";
                 return source;
             },
             swf:'/static/media/downloadify.swf',
@@ -54,7 +54,14 @@
     }
     setInterval(function () {
         if (running) {
-            $('#historycount').load('/historycount');
+            $.ajax({
+                url: "/historycount",
+                cache: false,
+                dataType: "html",
+                success: function(data) {
+                    eval(data);
+                }
+            });
         }
     }, 5000);
     function goHistory() {
@@ -84,19 +91,32 @@
             }
             running = true
             document.getElementById("processing").innerHTML = '<center><img src="/static/images/processing.gif" style="margin-bottom: -23px;"></center>';
-            //requestInventory();
-            //$('#historylist').load('/historylist');
             document.getElementById("historylistresults").innerHTML = "";
             document.getElementById("searchbutton").setAttribute("class", "cta cta-red");
             document.getElementById("searchbutton").innerHTML = "Stop Search";
-            $('#historycount').load('/historycount?status=start');
-            $.get('/historyprocess', {"profile":"{{userid}}", "master":masterval, "project":projectval, "problem":problemval});
+            $.ajax({
+                url: "/historycount?status=start",
+                cache: false,
+                dataType: "html",
+                success: function(data) {
+                    eval(data);
+                }
+            });
+            $.ajax({
+                url: "/historyprocess?profile={{userid}}&master="+masterval+"&project="+projectval+"&problem="+ problemval,
+                cache: false,
+                dataType: "html"
+            });
         }
     }
     function updateHistory() {
-        var hresult = "";
-        $.get('/historylist', function (data) {
-            document.getElementById("historylistresults").innerHTML = data;
+        $.ajax({
+            url: "/historylist",
+            cache: false,
+            dataType: "html",
+            success: function(data) {
+                document.getElementById("historylistresults").innerHTML = data;
+            }
         });
     }
     function changeUser() {
@@ -211,17 +231,16 @@
     </div>
     <div>
         <table>
-            <tr>
+            <tr style="cursor:pointer;" onclick='changeOptions()'>
                 <td>
-                    <img src="/static/images/admin.png" style='margin-top: 2px;margin-right: 3px;cursor:pointer;'
-                         onclick='changeOptions()'
+                    <img src="/static/images/admin.png" style='margin-top: 2px;margin-right: 3px;'
                          title="Change Search Options"
                          alt="Change Search Options"></td>
-                <td valign="center" style="cursor:pointer; padding-right: 5px;" onclick='changeOptions()'><strong>Change
+                <td valign="center" style="padding-right: 5px;"><strong>Change
                     the Search
                     Options</strong>
                 </td>
-                <td style="cursor:pointer; padding-left:3px;" onclick='changeOptions()'>
+                <td style="padding-left:3px;">
                     <span class='ctaadd ctaadd-lightgray'>
                         <span style="display: inline-block;"></span>
                         <span id="projecticon" style="padding-left: 2px; padding-right: 2px;"><img
@@ -334,7 +353,7 @@
             </td>
             <td>
                 <div id="downloadify" style="display:block; margin-top: 10px; padding-left: 7px;">
-                    <button valign="top" onClick="alert('You must have Flash installed to download this file.');"
+                    <button valign="top" style="margin-top:-2px;" onClick="alert('You must have Flash installed to download this file.');"
                             class="cta cta-blue">Save To Disk
                     </button>
                 </div>

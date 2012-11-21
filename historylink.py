@@ -385,10 +385,16 @@ class HistoryList(BaseHandler):
         for item in matches:
             if item["message"]:
                 if (i > showmatch):
-                    logging.info(" *** " + str(item["message"]) + " Match for " +  str(user["name"]) + " on " + item["id"] + ": " + item["name"])
+                    try:
+                        logging.info(" *** " + str(item["message"]) + " Match for " +  str(user["name"]) + " on " + item["id"] + ": " + item["name"])
+                    except:
+                        pass
             else:
                 if (i > showmatch):
-                    logging.info(" *** Project Match for " +  str(user["name"]) + " on " + item["id"] + ": " + item["name"])
+                    try:
+                        logging.info(" *** Project Match for " +  str(user["name"]) + " on " + item["id"] + ": " + item["name"])
+                    except:
+                        pass
             i += 1
         cookie.clear_matches(user["id"])
         self.render("historylist.html", matches=matches)
@@ -404,7 +410,10 @@ class HistoryCount(BaseHandler):
         stage = cookie.get(user["id"], "stage")
         status = cookie.get(user["id"], "running")
         hits = cookie.get(user["id"], "hits")
-        logging.info("  * " + str(user["name"]) + " (" + str(user["id"]) + "), count: " + str(count) + ", stage: " + str(stage))
+        try:
+            logging.info("  * " + str(user["name"]) + " (" + str(user["id"]) + "), count: " + str(count) + ", stage: " + str(stage))
+        except:
+            pass
         if result and result == "stop":
             status = 0
             self.application.linkHolder.stop(user["id"])
@@ -416,6 +425,7 @@ class HistoryCount(BaseHandler):
             cookie.set(user["id"], "hits", 0)
             count = 0
             stage = "parents"
+        self.set_header("Cache-control", "no-cache")
         self.render("historycount.html", count=count, status=status, stage=stage, hits=hits)
 
     def post(self):

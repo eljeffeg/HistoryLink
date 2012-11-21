@@ -1,13 +1,11 @@
-<script language="javascript" type="text/javascript">
-    var run = {{status}};
-    if (run == 0) {
-        stopHistory();
-        document.getElementById("statustext").innerHTML = "Researched the family of your {{stage}}&nbsp;&nbsp;&nbsp;({{count}} Profiles Completed)"
-    } else {
-        document.getElementById("statustext").innerHTML = "Researching the family of your {{stage}}&nbsp;&nbsp;&nbsp;({{count}} Profiles Completed)"
-    }
-    var hits = {{hits}};
-    if (hits != 0) {
-        updateHistory();
-    }
-</script>
+var run = {{status}};
+if (run == 0) {
+stopHistory();
+    document.getElementById("statustext").innerHTML = "Researched the family of your {{stage}}&nbsp;&nbsp;&nbsp;({{count}} Profiles Completed)";
+} else {
+    document.getElementById("statustext").innerHTML = "Researching the family of your {{stage}}&nbsp;&nbsp;&nbsp;({{count}} Profiles Completed)";
+}
+var hits = {{hits}};
+if (hits != 0) {
+    updateHistory();
+}
