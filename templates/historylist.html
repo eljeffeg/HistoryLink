@@ -2,7 +2,7 @@
 <table style="width: 100%;">
     <tr>
         <td style="width: 50%" align="left">
-            <a href='http://www.geni.com/{{item["id"]}}' target="_blank">{{item["name"]}}</a> {% if who %}is your{%else%}&nbsp;&mdash;&nbsp;{%end%} {{item["relation"]}}<br/>
+            <a href='http://www.geni.com/{{item["id"]}}' target="_blank">{{item["name"]}}</a>&#8206; {% if who %}is your{%else%}&nbsp;&ndash;&nbsp;{%end%} {{item["relation"]}}<br/>
         </td>
         <td style="width: 50%" align="right">
             {% for idx,project in enumerate(item["projects"]) %}
