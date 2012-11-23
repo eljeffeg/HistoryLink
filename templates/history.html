@@ -111,7 +111,7 @@
     }
     function updateHistory() {
         $.ajax({
-            url: "/historylist",
+            url: "/historylist?profile={{userid}}",
             cache: false,
             dataType: "html",
             success: function(data) {

@@ -1,11 +1,15 @@
 var run = {{status}};
-if (run == 0) {
-stopHistory();
-    document.getElementById("statustext").innerHTML = "Researched the family of your {{stage}}&nbsp;&nbsp;&nbsp;({{count}} Profiles Completed)";
-} else {
-    document.getElementById("statustext").innerHTML = "Researching the family of your {{stage}}&nbsp;&nbsp;&nbsp;({{count}} Profiles Completed)";
-}
 var hits = {{hits}};
+
+if (run == 0) {
+    document.getElementById("statustext").innerHTML = "Researched family history:&nbsp;&nbsp;{{stage}}&nbsp;&nbsp;({{count}} Profiles Completed)";
+} else {
+    document.getElementById("statustext").innerHTML = "Researching family history:&nbsp;&nbsp;{{stage}}&nbsp;&nbsp;({{count}} Profiles Completed)";
+}
 if (hits != 0) {
     updateHistory();
 }
+if (run == 0) {
+    stopHistory();
+}
+

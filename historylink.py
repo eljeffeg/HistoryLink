@@ -379,8 +379,12 @@ class HistoryList(BaseHandler):
         user = self.current_user
         cookie = self.application.linkHolder
         matches = cookie.get_matches(user["id"])
+        profile = self.get_argument("profile", None)
         hits = cookie.get(user["id"], "hits")
         showmatch = len(matches) - hits
+        who = "is your"
+        if profile != user["id"]:
+            who = None
         i = 1
         for item in matches:
             if item["message"]:
@@ -397,7 +401,7 @@ class HistoryList(BaseHandler):
                         pass
             i += 1
         cookie.clear_matches(user["id"])
-        self.render("historylist.html", matches=matches)
+        self.render("historylist.html", matches=matches, who=who)
 
 class HistoryCount(BaseHandler):
     @tornado.web.authenticated
