@@ -85,9 +85,14 @@
             masterval = document.getElementById("mastercheck").checked;
             projectval = document.getElementById("projectcheck").checked;
             problemval = document.getElementById("problemcheck").checked;
+            limitck = document.getElementById("limitcheck").checked;
             if (masterval == false && projectval == false && problemval == false) {
                 alert("No search options are selected.");
                 return
+            }
+            limitval = ""
+            if (limitck) {
+                limitval = "&limit=" + document.getElementById("genlimit").value;
             }
             running = true
             document.getElementById("processing").innerHTML = '<center><img src="/static/images/processing.gif" style="margin-bottom: -23px;"></center>';
@@ -103,7 +108,7 @@
                 }
             });
             $.ajax({
-                url: "/historyprocess?profile={{userid}}&master="+masterval+"&project="+projectval+"&problem="+ problemval,
+                url: "/historyprocess?profile={{userid}}&master="+masterval+"&project="+projectval+"&problem="+ problemval + limitval,
                 cache: false,
                 dataType: "html"
             });
@@ -125,26 +130,42 @@
     function changeOptions() {
         $('.slideDownOptions').slideToggle();
     }
+    function limitHelp() {
+        $('.slideDownProject').slideUp();
+        $('.slideDownProblem').slideUp();
+        $('.slideDownMaster').slideUp();
+        $('.slideDownLimit').slideToggle();
+    }
     function masterHelp() {
         $('.slideDownProject').slideUp();
         $('.slideDownProblem').slideUp();
+        $('.slideDownLimit').slideUp();
         $('.slideDownMaster').slideToggle();
     }
     function projectHelp() {
         $('.slideDownProblem').slideUp();
         $('.slideDownMaster').slideUp();
+        $('.slideDownLimit').slideUp();
         $('.slideDownProject').slideToggle();
     }
     function problemHelp() {
         $('.slideDownProject').slideUp();
         $('.slideDownMaster').slideUp();
+        $('.slideDownLimit').slideUp();
         $('.slideDownProblem').slideToggle();
+
     }
     function handleChange() {
         master = document.getElementById("mastercheck");
         project = document.getElementById("projectcheck");
         problem = document.getElementById("problemcheck");
+        limit = document.getElementById("limitcheck");
         note = ""
+        if (limit.checked) {
+            document.getElementById("limiticon").style.display = "inline";
+        } else {
+            document.getElementById("limiticon").style.display = "none";
+        }
         if (project.checked) {
             document.getElementById("projecticon").style.display = "inline";
             note = "Projects";
@@ -243,6 +264,9 @@
                 <td style="padding-left:3px;">
                     <span class='ctaadd ctaadd-lightgray'>
                         <span style="display: inline-block;"></span>
+                        <span id="limiticon" style="padding-left: 2px; padding-right: 2px;"><img
+                                src="/static/images/top2.png" style="margin-bottom: -3px;" alt="Limit Results"
+                                title="Limit Results"></span>
                         <span id="projecticon" style="padding-left: 2px; padding-right: 2px;"><img
                                 src="/static/images/project.png" style="margin-bottom: -3px;" alt="Project Profiles"
                                 title="Project Profiles"></span>
@@ -260,6 +284,22 @@
     </div>
     <div id="searchoptions" class="slideDownOptions" style="display: none;">
         <table class="shadoweffect-business" style="margin-top: 2px;">
+            <tr>
+                <td><img src="/static/images/top2.png" style="margin-bottom: -3px; padding-right: 1px;"></td>
+                <td style="padding-top: 1px;"><input type="checkbox" id="limitcheck" checked="true"
+                                                     onchange='handleChange();'></td>
+                <td valign="center" style="padding-bottom: 2px;">Limit Search Results to <input
+                        style="height: 16px; width: 22px;"
+                        id="genlimit" value="20"/> Generations
+                </td>
+                <td align="right">
+                    <img src="/static/images/help.png"
+                         style="padding-left: 3px; margin-bottom: -3px; cursor:pointer;" title="Project Profile Tip"
+                         alt="Project Profile Tip" onclick='limitHelp()'></td>
+            </tr>
+            <tr>
+                <td colpsan='4' style="padding-top: 4px;"></td>
+            </tr>
             <tr>
                 <td><img src="/static/images/project.png" style="margin-bottom: -3px; padding-right: 1px;"></td>
                 <td style="padding-top: 1px;"><input type="checkbox" id="projectcheck" checked="true"
@@ -341,6 +381,12 @@
                 that usually indicate bad data, such as people living past a certain number of years, number of children
                 attributed to a couple being larger than a certain threshold, or children's birth dates that occur after
                 the parent's birth date.
+            </div>
+            <div class="slideDownLimit"
+                 style="display: none; font-size: x-small; min-width: 380px; max-width:650px; text-align: left;">
+                <strong>Limit Results: </strong>Searching for ancestors can take an extended period of time.
+                Limiting the results provides a quicker completion time and reduces the burden placed on the server.
+                Unchecking this option will search all ancestors to the very top of the tree, possibly over 100 generations.
             </div>
         </div>
     </div>

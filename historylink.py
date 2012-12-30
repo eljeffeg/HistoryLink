@@ -94,6 +94,7 @@ class GeniApplication(tornado.web.Application):
             tornado.web.url(r"/historylist", HistoryList),
             tornado.web.url(r"/historycount", HistoryCount),
             tornado.web.url(r"/historyprocess", HistoryProcess),
+            tornado.web.url(r"/projectupdate", ProjectUpdate),
             tornado.web.url(r"/projectsubmit", ProjectSubmit),
             tornado.web.url(r"/projectlist", ProjectList),
             tornado.web.url(r"/login", LoginHandler, name="login"),
@@ -302,6 +303,19 @@ class HomeHandler(BaseHandler):
     def get(self):
         self.render("home.html")
 
+class ProjectUpdate(BaseHandler):
+    @tornado.web.asynchronous
+    @tornado.web.authenticated
+    def get(self):
+        self.write("update initiated")
+        self.finish()
+        user = self.current_user
+        projects = self.backend.get_projectlist()
+        for item in projects:
+            print "Updating Project: " + item["name"]
+            self.backend.add_project(str(item["id"]), user)
+        options.historyprofiles = set(self.backend.get_history_profiles())
+
 class ProjectSubmit(BaseHandler):
     @tornado.web.asynchronous
     @tornado.web.authenticated
@@ -448,6 +462,7 @@ class HistoryProcess(BaseHandler):
         master = self.get_argument("master", None)
         project = self.get_argument("project", True)
         problem = self.get_argument("problem", None)
+        limit = self.get_argument("limit", None)
         if master == "false":
             master = None
         if problem == "false":
@@ -462,7 +477,7 @@ class HistoryProcess(BaseHandler):
             options.historyprofiles = set(self.backend.get_history_profiles())
         if not profile:
             profile = user["id"]
-        args = {"user": user, "base": self, "profile": profile, "master": master, "project": project, "problem": problem}
+        args = {"user": user, "base": self, "profile": profile, "master": master, "project": project, "problem": problem, "limit": limit}
         HistoryWorker(self.worker_done, args).start()
 
     def worker_done(self, value):
@@ -478,6 +493,7 @@ class HistoryWorker(threading.Thread):
     master = None
     problem = None
     project = None
+    limit = None
     cookie = None
     family_root = []
     def __init__(self, callback=None, *args, **kwargs):
@@ -487,6 +503,7 @@ class HistoryWorker(threading.Thread):
         self.master = args[0]["master"]
         self.project = args[0]["project"]
         self.problem = args[0]["problem"]
+        self.limit = args[0]["limit"]
         self.cookie = self.base.application.linkHolder
         args = {}
         super(HistoryWorker, self).__init__(*args, **kwargs)
@@ -505,9 +522,10 @@ class HistoryWorker(threading.Thread):
             root = []
             root.extend(self.family_root)
             self.family_root = []
-            self.threadme(root, gen, 3, 10)
-            gen += 1
-            self.setGeneration(gen)
+            if not self.limit or int(self.limit) >= gen:
+                self.threadme(root, gen, 3, 10)
+                gen += 1
+                self.setGeneration(gen)
         self.cookie.set(profile, "running", 0)
         self.callback('DONE')
 
@@ -833,6 +851,13 @@ class Backend(object):
         for item in profiles:
             profilelist.append(item["profile_id"])
         return profilelist
+
+    def get_projectlist(self):
+        try:
+            projects = self.db.query("SELECT id,name FROM projects")
+        except:
+            projects = self.db.query("SELECT id,name FROM projects")
+        return projects
 
     def get_projects(self, id):
         try:
