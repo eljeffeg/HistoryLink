@@ -514,9 +514,8 @@ class HistoryWorker(threading.Thread):
         rootprofile = self.rootprofile
         if not rootprofile:
             rootprofile = profile
-        family = self.base.backend.get_family(rootprofile, self.user)
-        self.family_root = family.get_parents()
-        gen = 1
+        self.family_root.append(rootprofile)
+        gen = 0
         self.setGeneration(gen)
         while len(self.family_root) > 0:
             root = []
