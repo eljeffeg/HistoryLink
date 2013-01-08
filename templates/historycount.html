@@ -2,11 +2,11 @@ var run = {{status}};
 var hits = {{hits}};
 
 if (run == 0) {
-    document.getElementById("statustext").innerHTML = "Researched family history:&nbsp;&nbsp;{{stage}}&nbsp;&nbsp;({{count}} Profiles Completed)";
+    document.getElementById("statustext").innerHTML = "Researched family history:&nbsp;&nbsp;{{stage}}&nbsp;&nbsp;({{count}} Profiles Completed&nbsp;&ndash;&nbsp;{{match}} {% if match==1%}Match{% else %}Matches{%end%})";
 } else {
-    document.getElementById("statustext").innerHTML = "Researching family history:&nbsp;&nbsp;{{stage}}&nbsp;&nbsp;({{count}} Profiles Completed)";
+    document.getElementById("statustext").innerHTML = "Researching family history:&nbsp;&nbsp;{{stage}}&nbsp;&nbsp;({{count}} Profiles Completed&nbsp;&ndash;&nbsp;{{match}} {% if match==1%}Match{% else %}Matches{%end%})";
 }
-if (hits != 0) {
+if (hits != 0 && {{match}} > 0) {
     updateHistory();
 }
 if (run == 0) {

@@ -174,6 +174,14 @@ class LinkHolder(object):
             return []
         return self.cookie[id]["matches"]
 
+    def get_matchcount(self, id):
+        if not id in self.cookie:
+            return 0
+        if not "matches" in self.cookie[id]:
+            return 0
+        return len(self.cookie[id]["matches"])
+
+
     def add_history(self, id, history):
         if not id in self.cookie:
             self.cookie[id] = {}
@@ -428,6 +436,7 @@ class HistoryCount(BaseHandler):
         stage = cookie.get(user["id"], "stage")
         status = cookie.get(user["id"], "running")
         hits = cookie.get(user["id"], "hits")
+        match = cookie.get_matchcount(user["id"])
         try:
             logging.info("  * " + str(user["name"]) + " (" + str(user["id"]) + "), count: " + str(count) + ", stage: " + str(stage))
         except:
@@ -444,7 +453,7 @@ class HistoryCount(BaseHandler):
             count = 0
             stage = "parents"
         self.set_header("Cache-control", "no-cache")
-        self.render("historycount.html", count=count, status=status, stage=stage, hits=hits)
+        self.render("historycount.html", count=count, status=status, stage=stage, hits=hits, match=match)
 
     def post(self):
         user = self.current_user
