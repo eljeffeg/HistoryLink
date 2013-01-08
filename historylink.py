@@ -181,6 +181,38 @@ class LinkHolder(object):
             return 0
         return len(self.cookie[id]["matches"])
 
+    def set_familyroot(self, id, root):
+        if not id in self.cookie:
+            self.cookie[id] = {}
+        self.cookie[id]["familyroot"] = root
+
+    def append_familyroot(self, id, profile):
+        if not id in self.cookie:
+            self.cookie[id] = {}
+        if not "familyroot" in self.cookie[id]:
+            self.cookie[id]["familyroot"] = []
+        self.cookie[id]["familyroot"].append(profile)
+
+    def get_familyroot(self, id):
+        if not id in self.cookie:
+            return []
+        if not "familyroot" in self.cookie[id]:
+            return []
+        return self.cookie[id]["familyroot"]
+
+    def set_familylist(self, id, root):
+        if not id in self.cookie:
+            self.cookie[id] = {}
+        self.cookie[id]["familylist"] = set(root)
+
+    def get_familylist(self, id):
+        if not id in self.cookie:
+            return []
+        if not "familylist" in self.cookie[id]:
+            return []
+        return self.cookie[id]["familylist"]
+
+
 
     def add_history(self, id, history):
         if not id in self.cookie:
@@ -482,11 +514,16 @@ class HistoryProcess(BaseHandler):
         self.application.linkHolder.set(user["id"], "count", 0)
         self.application.linkHolder.set(user["id"], "running", 1)
         self.application.linkHolder.set(user["id"], "stage", "parents")
+        self.application.linkHolder.set(user["id"], "master", master)
+        self.application.linkHolder.set(user["id"], "project", project)
+        self.application.linkHolder.set(user["id"], "problem", problem)
+        self.application.linkHolder.set(user["id"], "limit", limit)
+        self.application.linkHolder.set(user["id"], "rootprofile", profile)
         if not options.historyprofiles:
             options.historyprofiles = set(self.backend.get_history_profiles())
         if not profile:
             profile = user["id"]
-        args = {"user": user, "base": self, "profile": profile, "master": master, "project": project, "problem": problem, "limit": limit}
+        args = {"user": user, "base": self}
         HistoryWorker(self.worker_done, args).start()
 
     def worker_done(self, value):
@@ -498,21 +535,11 @@ class HistoryProcess(BaseHandler):
 class HistoryWorker(threading.Thread):
     user = None
     base = None
-    rootprofile = None
-    master = None
-    problem = None
-    project = None
-    limit = None
     cookie = None
-    family_root = []
+
     def __init__(self, callback=None, *args, **kwargs):
         self.user = args[0]["user"]
         self.base = args[0]["base"]
-        self.rootprofile = args[0]["profile"]
-        self.master = args[0]["master"]
-        self.project = args[0]["project"]
-        self.problem = args[0]["problem"]
-        self.limit = args[0]["limit"]
         self.cookie = self.base.application.linkHolder
         args = {}
         super(HistoryWorker, self).__init__(*args, **kwargs)
@@ -520,18 +547,22 @@ class HistoryWorker(threading.Thread):
 
     def run(self):
         profile = self.user["id"]
-        rootprofile = self.rootprofile
+        rootprofile = self.cookie.get(profile, "rootprofile")
         if not rootprofile:
             rootprofile = profile
-        self.family_root.append(rootprofile)
+        self.cookie.set_familyroot(profile, [rootprofile])
+        limit = self.cookie.get(profile, "limit")
+        #family_root.append(rootprofile)
         gen = 0
         self.setGeneration(gen)
-        while len(self.family_root) > 0:
+
+        while len(self.cookie.get_familyroot(profile)) > 0:
             root = []
-            root.extend(self.family_root)
-            self.family_root = []
-            if not self.limit or int(self.limit) >= gen:
-                self.threadme(root, gen, 3, 10)
+            root.extend(self.cookie.get_familyroot(profile))
+            self.cookie.set_familyroot(profile, [])
+
+            if not limit or int(limit) >= gen:
+                self.threadme(root, 3, 10)
                 gen += 1
                 self.setGeneration(gen)
         self.cookie.set(profile, "running", 0)
@@ -555,6 +586,7 @@ class HistoryWorker(threading.Thread):
             stage = "great grandparents"
         elif gen > 2:
             stage = self.genPrefix(gen) + " great grandparents"
+        self.cookie.set(self.user["id"], "gen", gen)
         self.cookie.set(self.user["id"], "stage", stage)
         return
 
@@ -585,29 +617,30 @@ class HistoryWorker(threading.Thread):
                 match.append(item)
         return match
 
-    def threadme(self, family_root, gen, threadlimit=None, idlimit=10, timeout=0.05):
+    def threadme(self, root, threadlimit=None, idlimit=10, timeout=0.05):
         assert threadlimit > 0, "need at least one thread";
         printlock = threading.Lock()
         threadpool = []
 
         # keep going while work to do or being done
-        while family_root or threadpool:
+        while root or threadpool:
             done = self.checkdone()
             if done:
                 break
             parent_list = []
             # while there's room, remove source files
             # and add to the pool
-            while family_root and (threadlimit is None or len(threadpool) < threadlimit):
+            while root and (threadlimit is None or len(threadpool) < threadlimit):
                 i = idlimit
                 sub_root = []
                 while i > 0:
-                    sub_root.append(family_root.pop())
-                    if len(family_root) > 0:
+                    sub_root.append(root.pop())
+                    if len(root) > 0:
                         i -= 1
                     else:
                         i = 0
-                wrkr = SubWorker(self, sub_root, gen, printlock)
+                self.cookie.set_familylist(self.user["id"],sub_root)
+                wrkr = SubWorker(self, printlock)
                 wrkr.start()
                 threadpool.append(wrkr)
 
@@ -619,17 +652,15 @@ class HistoryWorker(threading.Thread):
         #print("all threads are done")
 
 class SubWorker(threading.Thread):
-    def __init__(self, root, family_list, gen, printlock,**kwargs):
+    def __init__(self, root, printlock,**kwargs):
         super(SubWorker,self).__init__(**kwargs)
-        self.family_list = family_list
         self.root = root
-        self.gen = gen
         self.lock = printlock # so threads don't step on each other's prints
 
     def run(self):
         #with self.lock:
         profile = self.root.user["id"]
-        the_group = self.root.base.backend.get_family_group(self.family_list, self.root.user)
+        the_group = self.root.base.backend.get_family_group(self.root.cookie.get_familylist(profile), self.root.user)
         if the_group:
             for this_family in the_group:
                 rematch = None
@@ -637,19 +668,23 @@ class SubWorker(threading.Thread):
                 if done:
                     break
                 relatives = this_family.get_family_branch_group()
+                master = self.root.cookie.get(profile, "master")
+                problem = self.root.cookie.get(profile, "problem")
+                project = self.root.cookie.get(profile, "project")
+                gen = self.root.cookie.get(profile, "gen")
                 for relative in relatives:
-                    if self.root.project and relative.get_id() in options.historyprofiles:
+                    if project and relative.get_id() in options.historyprofiles:
                         with self.lock:
                             projects = self.root.base.backend.get_projects(relative.get_id())
-                        match = {"id": relative.get_id(), "relation": relative.get_rel(self.gen), "name": relative.get_name(), "message": False, "projects": projects}
+                        match = {"id": relative.get_id(), "relation": relative.get_rel(gen), "name": relative.get_name(), "message": False, "projects": projects}
                         rematch = self.root.cookie.add_matches(profile, match)
-                    elif self.root.master and relative.is_master():
+                    elif master and relative.is_master():
                         projects = [None]
-                        match = {"id": relative.get_id(), "relation": relative.get_rel(self.gen), "name": relative.get_name(), "message": "Master Profile", "projects": projects}
+                        match = {"id": relative.get_id(), "relation": relative.get_rel(gen), "name": relative.get_name(), "message": "Master Profile", "projects": projects}
                         rematch = self.root.cookie.add_matches(profile, match)
-                    elif self.root.problem and relative.get_message():
+                    elif problem and relative.get_message():
                         projects = [None]
-                        match = {"id": relative.get_id(), "relation": relative.get_rel(self.gen), "name": relative.get_name(), "message": relative.get_message(), "projects": projects}
+                        match = {"id": relative.get_id(), "relation": relative.get_rel(gen), "name": relative.get_name(), "message": relative.get_message(), "projects": projects}
                         self.root.cookie.add_matches(profile, match)
                         rematch = True
                 count = int(self.root.cookie.get(profile, "count")) + len(relatives)
@@ -658,8 +693,8 @@ class SubWorker(threading.Thread):
                 history =  self.root.cookie.get_history(profile)
                 for parent in parents:
                     if not rematch and parent not in history:
-                        self.root.family_root.append(parent)
-            self.root.cookie.add_history(profile, self.root.family_root)
+                        self.root.cookie.append_familyroot(profile, parent)
+            self.root.cookie.add_history(profile, self.root.cookie.get_familyroot(profile))
 
 class LoginHandler(BaseHandler):
     @tornado.web.asynchronous
