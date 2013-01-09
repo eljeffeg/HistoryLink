@@ -200,20 +200,6 @@ class LinkHolder(object):
             return []
         return self.cookie[id]["familyroot"]
 
-    def set_familylist(self, id, root):
-        if not id in self.cookie:
-            self.cookie[id] = {}
-        self.cookie[id]["familylist"] = set(root)
-
-    def get_familylist(self, id):
-        if not id in self.cookie:
-            return []
-        if not "familylist" in self.cookie[id]:
-            return []
-        return self.cookie[id]["familylist"]
-
-
-
     def add_history(self, id, history):
         if not id in self.cookie:
             self.cookie[id] = {}
@@ -639,8 +625,7 @@ class HistoryWorker(threading.Thread):
                         i -= 1
                     else:
                         i = 0
-                self.cookie.set_familylist(self.user["id"],sub_root)
-                wrkr = SubWorker(self, printlock)
+                wrkr = SubWorker(self, sub_root, printlock)
                 wrkr.start()
                 threadpool.append(wrkr)
 
@@ -652,15 +637,16 @@ class HistoryWorker(threading.Thread):
         #print("all threads are done")
 
 class SubWorker(threading.Thread):
-    def __init__(self, root, printlock,**kwargs):
+    def __init__(self, root, family_list, printlock,**kwargs):
         super(SubWorker,self).__init__(**kwargs)
         self.root = root
+        self.family_list = family_list
         self.lock = printlock # so threads don't step on each other's prints
 
     def run(self):
         #with self.lock:
         profile = self.root.user["id"]
-        the_group = self.root.base.backend.get_family_group(self.root.cookie.get_familylist(profile), self.root.user)
+        the_group = self.root.base.backend.get_family_group(self.family_list, self.root.user)
         if the_group:
             for this_family in the_group:
                 rematch = None
