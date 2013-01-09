@@ -15,3 +15,27 @@
 </table>
 <div class="separator"></div>
 {% end %}
+{% if len(projects) > 0 %}
+<center><img alt="" src="data:image/jpeg;base64,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" /></center>
+<strong>Project Count</strong>
+<hr/>
+<table width="100%"><tr><td>
+    {% for idx,item in enumerate(projects) %}
+    <div style="float: left; width: 50%; display: inline-block;">
+        <ul>
+            {% if idx%2 == 0 %}
+                <li><font size="3" color="darkblue">•&nbsp;&nbsp;</font><a href='http://www.geni.com/project-{{item}}' target="_blank">{{ projects[item]["name"] }} ({{projects[item]["count"]}})</a></li>
+            {% end %}
+        </ul>
+    </div>
+    <div style="float: right; width: 50%;display: inline-block;">
+        <ul>
+            {% if idx%2 != 0 %}
+                <li><font size="3" color="darkblue">•&nbsp;&nbsp;</font><a href='http://www.geni.com/project-{{item}}' target="_blank">{{ projects[item]["name"] }} ({{projects[item]["count"]}})</a></li>
+            {% end %}
+        </ul>
+    </div>
+    {% end %}
+</td></tr></table>
+{% end %}
+

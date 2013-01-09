@@ -3,21 +3,20 @@
 <div class="shadoweffect-business" id="shadoweffect" >
     <table width="100%"><tr><td>
         {% for idx,item in enumerate(projects) %}
-        {% if idx == 0 %}
         <div style="float: left; width: 50%; display: inline-block;">
             <ul>
+                {% if idx%2 == 0 %}
+                <li><font size="3" color="darkblue">•&nbsp;&nbsp;</font><a href='http://www.geni.com/project-{{item["id"]}}' target="_blank">{{item["id"]}}:&nbsp;&nbsp;&nbsp;{{ item["name"] }} ({{item["count"]}})</a></li>
                 {% end %}
-                {% if idx == round((len(projects)/2)+.5) %}
             </ul>
         </div>
         <div style="float: right; width: 50%;display: inline-block;">
             <ul>
-                {% end %}
+                {% if idx%2 != 0 %}
                 <li><font size="3" color="darkblue">•&nbsp;&nbsp;</font><a href='http://www.geni.com/project-{{item["id"]}}' target="_blank">{{item["id"]}}:&nbsp;&nbsp;&nbsp;{{ item["name"] }} ({{item["count"]}})</a></li>
-                {% if idx == len(projects)-1 %}
+                {% end %}
             </ul>
         </div>
-        {% end %}
         {% end %}
     </td></tr></table>
 </div>

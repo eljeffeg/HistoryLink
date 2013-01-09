@@ -232,7 +232,7 @@ class LinkHolder(object):
         if key == "count":
             return 0
         elif key == "stage":
-            return "parents"
+            return "parent's family"
         elif key == "running":
             return 0
         elif key == "hits":
@@ -348,7 +348,10 @@ class ProjectSubmit(BaseHandler):
     def post(self):
         project = self.get_argument("project", None)
         user = self.current_user
-        logging.info(" *** " +  str(user["name"]) + " (" + str(user["id"]) + ") submitted project " + project)
+        try:
+            logging.info(" *** " +  str(user["name"]) + " (" + str(user["id"]) + ") submitted project " + project)
+        except:
+            pass
         if not project:
             self.finish()
         args = {"user": user, "base": self, "project": project}
@@ -426,6 +429,7 @@ class HistoryList(BaseHandler):
         if profile != user["id"]:
             who = None
         i = 1
+        projects = {}
         for item in matches:
             if item["message"]:
                 if (i > showmatch):
@@ -439,9 +443,14 @@ class HistoryList(BaseHandler):
                         logging.info(" *** Project Match for " +  str(user["name"]) + " on " + item["id"] + ": " + item["name"])
                     except:
                         pass
+                for project in item["projects"]:
+                    if project["id"] in projects:
+                        projects[int(project["id"])]["count"] += 1
+                    else:
+                        projects[int(project["id"])] = {"count": 1, "name": project["name"]}
             i += 1
         cookie.clear_matches(user["id"])
-        self.render("historylist.html", matches=matches, who=who)
+        self.render("historylist.html", matches=matches, who=who, projects=projects)
 
 class HistoryCount(BaseHandler):
     @tornado.web.authenticated
@@ -466,10 +475,10 @@ class HistoryCount(BaseHandler):
             status = 1
             cookie.set(user["id"], "running", 1)
             cookie.set(user["id"], "count", 0)
-            cookie.set(user["id"], "stage", "parents")
+            cookie.set(user["id"], "stage", "parent's family")
             cookie.set(user["id"], "hits", 0)
             count = 0
-            stage = "parents"
+            stage = "parent's family"
         self.set_header("Cache-control", "no-cache")
         self.render("historycount.html", count=count, status=status, stage=stage, hits=hits, match=match)
 
@@ -499,7 +508,7 @@ class HistoryProcess(BaseHandler):
         user = self.current_user
         self.application.linkHolder.set(user["id"], "count", 0)
         self.application.linkHolder.set(user["id"], "running", 1)
-        self.application.linkHolder.set(user["id"], "stage", "parents")
+        self.application.linkHolder.set(user["id"], "stage", "parent's family")
         self.application.linkHolder.set(user["id"], "master", master)
         self.application.linkHolder.set(user["id"], "project", project)
         self.application.linkHolder.set(user["id"], "problem", problem)
@@ -565,13 +574,13 @@ class HistoryWorker(threading.Thread):
     def setGeneration(self, gen):
         stage = None
         if gen == 0:
-            stage = "parents"
+            stage = "parent's family"
         elif gen == 1:
-            stage = "grand parents"
+            stage = "grand parent's family"
         elif gen == 2:
-            stage = "great grandparents"
+            stage = "great grandparent's family"
         elif gen > 2:
-            stage = self.genPrefix(gen) + " great grandparents"
+            stage = self.genPrefix(gen) + " great grandparent's family"
         self.cookie.set(self.user["id"], "gen", gen)
         self.cookie.set(self.user["id"], "stage", stage)
         return
