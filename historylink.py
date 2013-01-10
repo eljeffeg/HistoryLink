@@ -215,7 +215,7 @@ class LinkHolder(object):
             return set([])
         return self.cookie[id]["history"]
 
-    def clear_matches(self, id):
+    def reset_matchhit(self, id):
         if not id in self.cookie:
             return
             #if "matches" in self.cookie[id]:
@@ -275,6 +275,8 @@ class BaseHandler(tornado.web.RequestHandler):
 
     def get_current_user(self):
         if not self.get_secure_cookie("uid"):
+            return None
+        if self.get_secure_cookie("uid") == "":
             return None
         user = {'id': self.get_secure_cookie("uid"), 'access_token': self.get_secure_cookie("access_token"), 'name': self.get_secure_cookie("name")}
         return user
@@ -449,7 +451,7 @@ class HistoryList(BaseHandler):
                     else:
                         projects[int(project["id"])] = {"count": 1, "name": project["name"]}
             i += 1
-        cookie.clear_matches(user["id"])
+        cookie.reset_matchhit(user["id"])
         self.render("historylist.html", matches=matches, who=who, projects=projects)
 
 class HistoryCount(BaseHandler):
@@ -482,9 +484,11 @@ class HistoryCount(BaseHandler):
         self.set_header("Cache-control", "no-cache")
         self.render("historycount.html", count=count, status=status, stage=stage, hits=hits, match=match)
 
+    @tornado.web.authenticated
     def post(self):
         user = self.current_user
-        self.application.linkHolder.stop(user["id"])
+        if user and "id" in user:
+            self.application.linkHolder.stop(user["id"])
         try:
             self.finsih()
         except:
@@ -656,6 +660,11 @@ class SubWorker(threading.Thread):
         #with self.lock:
         profile = self.root.user["id"]
         the_group = self.root.base.backend.get_family_group(self.family_list, self.root.user)
+        if the_group=="Invalid access token":
+            self.root.cookie.stop(profile)
+            self.root.base.set_secure_cookie("access_token", "")
+            self.root.base.set_secure_cookie("uid", "")
+            the_group = None
         if the_group:
             for this_family in the_group:
                 rematch = None

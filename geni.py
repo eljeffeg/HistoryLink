@@ -115,7 +115,9 @@ class GeniAPI(object):
             result = self.process_group(family_group)
         else:
             if "message" in family_group["error"]:
-                if "Access Denied" == family_group["error"]["message"]:
+                if "Invalid access token"  == family_group["error"]["message"]:
+                    result = "Invalid access token"
+                elif "Access Denied" == family_group["error"]["message"]:
                     newlist = []
                     startlist = ids.split(",")
                     if len(startlist) == 1:

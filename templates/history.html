@@ -122,7 +122,9 @@
             cache: false,
             dataType: "html",
             success: function(data) {
-                document.getElementById("historylistresults").innerHTML = data;
+                if (data.length > 0) {
+                    document.getElementById("historylistresults").innerHTML = data;
+                }
             }
         });
     }
