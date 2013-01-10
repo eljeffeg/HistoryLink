@@ -768,14 +768,17 @@ class LoginHandler(BaseHandler):
 class LogoutHandler(BaseHandler):
     @tornado.web.asynchronous
     def get(self):
-        self.set_secure_cookie("uid", None)
         redirect_uri = self.request.protocol + "://" + self.request.host
         user = self.current_user
         access_token = user["access_token"]
+        cookie = self.application.linkHolder
+        cookie.stop(user["id"])
+        self.set_secure_cookie("access_token", "")
+        self.set_secure_cookie("uid", "")
         urllib2.urlopen("https://www.geni.com/platform/oauth/invalidate_token?" + urllib.urlencode({
             "access_token": access_token
         }))
-        self.redirect("http://www.geni.com")
+        self.redirect(redirect_uri)
 
 class GeniCanvasHandler(HomeHandler):
     @tornado.web.asynchronous

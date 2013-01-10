@@ -1,5 +1,5 @@
 <!doctype html>
-<html>
+<html xmlns="http://www.w3.org/1999/html">
 <head>
     <title>{% block title %}HistoryLink{% end %}</title>
     <link rel="icon" type="image/png" href="/static/favicon.ico" />
@@ -36,6 +36,7 @@
                         -->
                     </ul>
                 </nav>
+
 
             </div>
             <div class="bottom-gradient ">
@@ -76,7 +77,9 @@
         <div class="terms"><br/>
             <font size="2"><strong>Disclaimer: HistoryLink uses the Geni API but is not endorsed, operated, or sponsored by Geni, Inc.</strong></font>
             <br/>
-            <a href="http://www.geni.com/company/privacy">Privacy Policy</a> | <a href="http://www.geni.com/company/terms_of_use">Terms of Use</a>
+            <a href="http://www.geni.com/company/privacy">Privacy Policy</a> |
+            <a href="http://www.geni.com/company/terms_of_use">Terms of Use</a> |
+            {% if current_user %}<a href="/logout">Logout</a>{% else %}<a href="/login">Login</a>{% end %}
 
         </div>
     </div>
