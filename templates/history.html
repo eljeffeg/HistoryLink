@@ -227,18 +227,6 @@
     }
 </script>
 <br/><br/>
-<div class="shadoweffect-business">
-    Note: The <a href="http://www.geni.com/platform/developer/" target="_blank">Geni API</a> limits applications (this
-    website for all users) to 40 queries every 10 seconds.
-    Since investigating your tree history (and others) could involve <a
-        href="https://www.youtube.com/watch?v=BhtgINeaJWg&feature=share" target="_blank">exponential queries</a>, please
-    be patient. The page will update automatically with progress every 5 seconds.
-    <br/><br/>
-    While it is common to be related to the same ancestor via different pathways, HistoryLink will only report an
-    ancestor once. <a href="https://www.geni.com/account_settings/premium_account">Geni Pro</a> members can view the
-    step-by-step pathway to those ancestors.
-</div>
-<br/>
 <center>
     <div style="margin-left: 32px;"><h1>History Link for {{username}}<img src="/static/images/user1.png"
                                                                           style='margin-bottom: -3px; padding-left: 2px; cursor:pointer;'
@@ -431,5 +419,12 @@
     </div>
     <div id="count"></div>
 </div>
-<br/>
+<div class="shadoweffect-note">
+    <strong>Note:</strong> Investigating a tree history could involve <a
+        href="https://www.youtube.com/watch?v=BhtgINeaJWg&feature=share" target="_blank">exponential queries</a>, please
+    be patient. The page will update automatically with progress every 5 seconds. While it is common to be related to the same ancestor via different pathways, HistoryLink will only report an
+    ancestor once. <a href="https://www.geni.com/account_settings/premium_account">Geni Pro</a> members can view the
+    step-by-step pathway to those ancestors.
+</div>
+
 {% end %}

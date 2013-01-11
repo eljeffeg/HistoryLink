@@ -560,8 +560,10 @@ class HistoryWorker(threading.Thread):
             root.extend(self.cookie.get_familyroot(profile))
             self.cookie.set_familyroot(profile, [])
 
+            threads = 4
+            profilesAtOnce = 10
             if not limit or int(limit) >= gen:
-                self.threadme(root, 3, 10)
+                self.threadme(root, threads, profilesAtOnce)
                 gen += 1
                 self.setGeneration(gen)
         self.cookie.set(profile, "running", 0)
