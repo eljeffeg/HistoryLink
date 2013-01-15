@@ -822,17 +822,15 @@ class Backend(object):
             return
         if not project_id.isdigit():
             return
-        existing_id = None
+        projectname = self.get_project_name(project_id, user)
         try:
-            existing_id = self.db.query("SELECT id FROM projects WHERE id = %s", project_id)
-        except:
-            #Try to handle error (2006 MySQL server has gone away)
-            existing_id = self.db.query("SELECT id FROM projects WHERE id = %s", project_id)
-        if not existing_id:
-            projectname = self.get_project_name(project_id, user)
             self.db.execute(
-                "INSERT IGNORE INTO projects (id, name) "
-                "VALUES (%s,%s)", project_id, projectname)
+                "INSERT INTO projects (id, name) VALUES (%s,%s) "
+                "ON DUPLICATE KEY UPDATE name=%s", project_id, projectname, projectname)
+        except:
+            self.db.execute(
+                "INSERT INTO projects (id, name) VALUES (%s,%s) "
+                "ON DUPLICATE KEY UPDATE name=%s", project_id, projectname, projectname)
         projectprofiles = self.get_project_profiles(project_id, user)
         if projectprofiles and len(projectprofiles) > 0:
             pass
