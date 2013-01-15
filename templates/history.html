@@ -83,37 +83,44 @@
     }
     function runHistory() {
         if (running == false) {
-            matchcount = 0;
-            masterval = document.getElementById("mastercheck").checked;
-            projectval = document.getElementById("projectcheck").checked;
-            problemval = document.getElementById("problemcheck").checked;
-            limitck = document.getElementById("limitcheck").checked;
-            if (masterval == false && projectval == false && problemval == false) {
-                alert("No search options are selected.");
-                return
+            var results = document.getElementById("historylistresults").innerHTML;
+            var conf = true;
+            if (results.trim().length > 0) {
+                conf = confirm("This will clear your current search results.  Do you wish to continue?");
             }
-            limitval = ""
-            if (limitck) {
-                limitval = "&limit=" + document.getElementById("genlimit").value;
-            }
-            running = true
-            document.getElementById("processing").innerHTML = '<center><img src="/static/images/processing.gif" style="margin-bottom: -23px;"></center>';
-            document.getElementById("historylistresults").innerHTML = "";
-            document.getElementById("searchbutton").setAttribute("class", "cta cta-red");
-            document.getElementById("searchbutton").innerHTML = "Stop Search";
-            $.ajax({
-                url: "/historycount?status=start",
-                cache: false,
-                dataType: "html",
-                success: function(data) {
-                    eval(data);
+            if(conf == true){
+                matchcount = 0;
+                masterval = document.getElementById("mastercheck").checked;
+                projectval = document.getElementById("projectcheck").checked;
+                problemval = document.getElementById("problemcheck").checked;
+                limitck = document.getElementById("limitcheck").checked;
+                if (masterval == false && projectval == false && problemval == false) {
+                    alert("No search options are selected.");
+                    return
                 }
-            });
-            $.ajax({
-                url: "/historyprocess?profile={{userid}}&master="+masterval+"&project="+projectval+"&problem="+ problemval + limitval,
-                cache: false,
-                dataType: "html"
-            });
+                limitval = ""
+                if (limitck) {
+                    limitval = "&limit=" + document.getElementById("genlimit").value;
+                }
+                running = true
+                document.getElementById("processing").innerHTML = '<center><img src="/static/images/processing.gif" style="margin-bottom: -23px;"></center>';
+                document.getElementById("historylistresults").innerHTML = "";
+                document.getElementById("searchbutton").setAttribute("class", "cta cta-red");
+                document.getElementById("searchbutton").innerHTML = "Stop Search";
+                $.ajax({
+                    url: "/historycount?status=start",
+                    cache: false,
+                    dataType: "html",
+                    success: function(data) {
+                        eval(data);
+                    }
+                });
+                $.ajax({
+                    url: "/historyprocess?profile={{userid}}&master="+masterval+"&project="+projectval+"&problem="+ problemval + limitval,
+                    cache: false,
+                    dataType: "html"
+                });
+            }
         }
     }
     function updateHistory() {
@@ -122,7 +129,7 @@
             cache: false,
             dataType: "html",
             success: function(data) {
-                if (data.length > 0) {
+                if (data.trim().length > 0) {
                     document.getElementById("historylistresults").innerHTML = data;
                 }
             }
@@ -197,7 +204,7 @@
         document.getElementById("hitnote").innerHTML = note;
     }
     function submitProfile() {
-        var profile_id = document.getElementById("userfield").value.toString();
+        var profile_id = document.getElementById("userfield").value.toString().trim();
         if (profile_id.length > 0) {
             if (profile_id.indexOf("/") != -1) {
                 //Grab the GUID from a URL
