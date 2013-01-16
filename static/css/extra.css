@@ -127,6 +127,11 @@ p.copyright-info {
     z-index: 3;
 }
 
+.graphbar {
+    border: 0px;
+    background: #50de76;
+}
+
 .cta {
     float: left;
     display: inline-block;

@@ -1,0 +1,19 @@
+{%if parentcount %}
+    <strong>Tree Completeness</strong>
+    <hr/>
+    <table width="100%">
+    {% set total = 2 %}
+    {% for idx,item in enumerate(parentcount) %}
+        {% if gen > idx %}
+        {% set percent = int(round((float(parentcount[str(idx)]["count"])/float(total)) * 100)) %}
+        <tr>
+        <td style="white-space: nowrap;">{{parentcount[str(idx)]["label"]}}</td>
+            <td style="white-space: nowrap; text-align: center; padding-left: 15px; padding-right: 15px;">
+                {{parentcount[str(idx)]["count"]}} / {{total}}
+            </td>
+            <td style="width: 100%; border: 1px solid #767676;"><div class="graphbar" style="width:{{percent}}%; height: 100%">&nbsp;{{percent}}%</div><span></span></td></tr>
+        {% set total = 2 * total %}
+        {% end %}
+    {%end%}
+    </table>
+{%end%}

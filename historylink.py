@@ -97,6 +97,7 @@ class GeniApplication(tornado.web.Application):
             tornado.web.url(r"/projectupdate", ProjectUpdate),
             tornado.web.url(r"/projectsubmit", ProjectSubmit),
             tornado.web.url(r"/projectlist", ProjectList),
+            tornado.web.url(r"/treecomplete", TreeComplete),
             tornado.web.url(r"/login", LoginHandler, name="login"),
             tornado.web.url(r"/logout", LogoutHandler, name="logout"),
             tornado.web.url(r"/geni", GeniCanvasHandler),
@@ -181,6 +182,25 @@ class LinkHolder(object):
             return 0
         return len(self.cookie[id]["matches"])
 
+    def addParentCount(self, id, gen, parentcount):
+        if not id in self.cookie:
+            self.cookie[id] = {}
+        if not "gencount" in self.cookie[id]:
+            self.cookie[id]["gencount"] = {}
+        if not str(gen) in self.cookie[id]["gencount"]:
+            self.cookie[id]["gencount"][str(gen)] = {}
+            self.cookie[id]["gencount"][str(gen)]["count"] = parentcount
+            self.cookie[id]["gencount"][str(gen)]["label"] = str(self.getGeneration(gen)) + "s"
+        else:
+            self.cookie[id]["gencount"][str(gen)]["count"] += parentcount
+
+    def getParentCount(self, id):
+        if not id in self.cookie:
+            return None
+        if not "gencount" in self.cookie[id]:
+            return None
+        return self.cookie[id]["gencount"]
+
     def set_familyroot(self, id, root):
         if not id in self.cookie:
             self.cookie[id] = {}
@@ -239,6 +259,36 @@ class LinkHolder(object):
             return 0
         else:
             return None
+
+    def getGeneration(self, gen):
+        stage = "parent"
+        if gen == 1:
+            stage = "grand parent"
+        elif gen == 2:
+            stage = "great grandparent"
+        elif gen > 2:
+            stage = self.genPrefix(gen) + " great grandparent"
+        return stage
+
+    def genPrefix(self, gen):
+        gen -= 1
+        value = ""
+        if gen == 2:
+            value = str(gen) + "nd"
+        elif gen == 3:
+            value = str(gen) + "rd"
+        elif gen > 3:
+            if gen < 21:
+                value =  str(gen) + "th"
+            elif gen % 10 == 1:
+                value = str(gen) + "st"
+            elif gen % 10 == 2:
+                value = str(gen) + "nd"
+            elif gen % 10 == 3:
+                value = str(gen) + "rd"
+            else:
+                value = str(gen) + "th"
+        return value
 
     def stop(self, id):
         if id and id in self.cookie:
@@ -401,6 +451,16 @@ class ProjectList(BaseHandler):
             self.render("projectlist.html", projects=projects, count=count)
         except:
             return
+
+class TreeComplete(BaseHandler):
+    @tornado.web.authenticated
+    @tornado.web.asynchronous
+    def get(self):
+        user = self.current_user
+        cookie = self.application.linkHolder
+        parentcount = cookie.getParentCount(user["id"])
+        gen = cookie.get(user["id"], "gen")
+        self.render("treecomplete.html", parentcount=parentcount, gen=gen)
 
 class HistoryHandler(BaseHandler):
     @tornado.web.authenticated
@@ -578,38 +638,10 @@ class HistoryWorker(threading.Thread):
             return False
 
     def setGeneration(self, gen):
-        stage = None
-        if gen == 0:
-            stage = "parent's family"
-        elif gen == 1:
-            stage = "grand parent's family"
-        elif gen == 2:
-            stage = "great grandparent's family"
-        elif gen > 2:
-            stage = self.genPrefix(gen) + " great grandparent's family"
+        stage = str(self.cookie.getGeneration(gen)) + "'s family"
         self.cookie.set(self.user["id"], "gen", gen)
         self.cookie.set(self.user["id"], "stage", stage)
         return
-
-    def genPrefix(self, gen):
-        gen -= 1
-        value = ""
-        if gen == 2:
-            value = str(gen) + "nd"
-        elif gen == 3:
-            value = str(gen) + "rd"
-        elif gen > 3:
-            if gen < 21:
-                value =  str(gen) + "th"
-            elif gen % 10 == 1:
-                value = str(gen) + "st"
-            elif gen % 10 == 2:
-                value = str(gen) + "nd"
-            elif gen % 10 == 3:
-                value = str(gen) + "rd"
-            else:
-                value = str(gen) + "th"
-        return value
 
     def checkmatch(self, family):
         match = []
@@ -649,7 +681,7 @@ class HistoryWorker(threading.Thread):
                 thr.join(timeout=timeout)
                 if not thr.is_alive():
                     threadpool.remove(thr)
-        #print("all threads are done")
+                    #print("all threads are done")
 
 class SubWorker(threading.Thread):
     def __init__(self, root, family_list, printlock,**kwargs):
@@ -674,10 +706,12 @@ class SubWorker(threading.Thread):
                 if done:
                     break
                 relatives = this_family.get_family_branch_group()
+                parentscount = len(this_family.get_parents())
                 master = self.root.cookie.get(profile, "master")
                 problem = self.root.cookie.get(profile, "problem")
                 project = self.root.cookie.get(profile, "project")
                 gen = self.root.cookie.get(profile, "gen")
+                self.root.cookie.addParentCount(profile, gen, parentscount)
                 for relative in relatives:
                     if project and relative.get_id() in options.historyprofiles:
                         with self.lock:
