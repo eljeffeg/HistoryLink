@@ -367,6 +367,9 @@ class Family(object):
                         if relative:
                             self.family.append(relative)
 
+    def get_focus(self):
+        return self.focus
+
     def get_profile(self, profile, gen=0):
         relative = None
         name = None
