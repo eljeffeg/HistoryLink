@@ -5,15 +5,21 @@
     <link rel="icon" type="image/png" href="/static/favicon.ico" />
     <link type="text/css" rel="stylesheet" href="/static/css/base.css">
     <link type="text/css" rel="stylesheet" href="/static/css/extra.css">
-    <script src="/static/js/jquery.js" type="text/javascript"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script>window.jQuery || document.write('<script src="/static/js/jquery.js"><\/script>')</script>
     <link href="https://fonts.googleapis.com/css?family=Open+Sans:400,600,400italic" rel="stylesheet" type="text/css">
-
+    <script language="javascript" type="text/javascript">
+        if(typeof String.prototype.trim !== 'function') {
+        String.prototype.trim = function() {
+            return this.replace(/^\s+|\s+$/g, '');
+        }
+    }
+    </script>
 
     {% block head %}{% end %}
 </head>
 <body>
 <div id="SiteContainer">
-
 
     <div id="headercolumn" class="columntab">
         <header>
@@ -72,15 +78,17 @@
     </div>
 
     {% block bottom %}{% end %}
-
-    <div id="copyright" style="margin-left: -10px; margin-right: 40px;">
-        <div class="terms"><br/>
-            <font size="2"><strong>Disclaimer: HistoryLink uses the Geni API but is not endorsed, operated, or sponsored by Geni, Inc.</strong></font>
-            <br/>
-            <a href="http://www.geni.com/company/privacy">Privacy Policy</a> |
-            <a href="http://www.geni.com/company/terms_of_use">Terms of Use</a> |
-            {% if current_user %}<a href="/logout">Logout</a>{% else %}<a href="/login">Login</a>{% end %}
-
+    <div id="copyright" class="columntab">
+        <div class="terms" style="margin-right: 35px;"><br/>
+            <table style="width:100%;"><tr><td style="width:205px;">
+                <div style='width:200px;text-align:center'><iframe src='http://www.geni.com/trends/world_tree_badge' width='200' height='55' scrolling='no' frameborder='0'></iframe><div style='font-family:Arial,Helvetica,sans-serif;font-size:10px'>Join the worlds largest <a href='http://www.geni.com'>family tree</a></div></div></td>
+            <td style="text-align: right; vertical-align: text-top;">
+                <font size="2"><strong>Disclaimer: HistoryLink uses the Geni API but is not endorsed, operated, or sponsored by Geni, Inc.</strong></font>
+                <br/><br/>
+                <a href="http://www.geni.com/company/privacy">Privacy Policy</a> |
+                <a href="http://www.geni.com/company/terms_of_use">Terms of Use</a> |
+                {% if current_user %}<a href="/logout">Logout</a>{% else %}<a href="/login">Login</a>{% end %}
+            </td></tr></table>
         </div>
     </div>
 </div>

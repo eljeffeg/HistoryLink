@@ -424,7 +424,10 @@ class ProjectUpdate(BaseHandler):
         user = self.current_user
         projects = self.backend.get_projectlist()
         for item in projects:
-            print "Updating Project: " + item["name"]
+            try:
+                print "Updating Project: " + item["name"]
+            except:
+                print "Updating Project: " + item["id"]
             self.backend.add_project(str(item["id"]), user)
         options.historyprofiles = set(self.backend.get_history_profiles())
 
