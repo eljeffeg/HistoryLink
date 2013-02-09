@@ -323,6 +323,7 @@ class Family(object):
     def __init__(self, focus, response, error=None):
         self.unions = []
         self.family = []
+        self.focus = None
         if error:
             profile = None
             name = None

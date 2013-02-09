@@ -82,14 +82,19 @@
         document.getElementById("statustext").innerHTML = statusval.replace("Researching", "Researched");
         document.getElementById("searchbutton").setAttribute("class", "cta cta-green");
         document.getElementById("searchbutton").innerHTML = "Start Search";
+        setTimeout('fullStop()', 1000);
+    }
+
+    function fullStop() {
         $.post('/historycount');
     }
     function runHistory() {
         if (running == false) {
             var results = document.getElementById("historylistresults").innerHTML;
+            var completeresults = document.getElementById("completeness").innerHTML;
             var conf = true;
-            if (results.trim().length > 0) {
-                conf = confirm("This will clear your current search results.  Do you wish to continue?");
+            if (results.trim().length > 0 || completeresults.trim().length > 0) {
+                conf = confirm("This will clear your current results.  Do you wish to continue?");
             }
             if(conf == true){
                 matchcount = 0;
@@ -97,10 +102,6 @@
                 projectval = document.getElementById("projectcheck").checked;
                 problemval = document.getElementById("problemcheck").checked;
                 limitck = document.getElementById("limitcheck").checked;
-                if (masterval == false && projectval == false && problemval == false) {
-                    alert("No search options are selected.");
-                    return
-                }
                 limitval = ""
                 if (limitck) {
                     limitval = "&limit=" + document.getElementById("genlimit").value;
@@ -108,6 +109,7 @@
                 running = true
                 document.getElementById("processing").innerHTML = '<center><img src="/static/images/processing.gif" style="margin-bottom: -23px;"></center>';
                 document.getElementById("historylistresults").innerHTML = "";
+                document.getElementById("completeness").innerHTML = "";
                 document.getElementById("searchbutton").setAttribute("class", "cta cta-red");
                 document.getElementById("searchbutton").innerHTML = "Stop Search";
                 $.ajax({
