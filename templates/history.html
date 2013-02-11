@@ -101,14 +101,21 @@
                 masterval = document.getElementById("mastercheck").checked;
                 projectval = document.getElementById("projectcheck").checked;
                 problemval = document.getElementById("problemcheck").checked;
+                completeval = document.getElementById("completecheck").checked;
                 limitck = document.getElementById("limitcheck").checked;
-                limitval = ""
+                if (masterval == false && projectval == false && problemval == false && completeval == false) {
+                    alert("No search options are selected.");
+                    return
+                }
+
+                limitval = "";
                 if (limitck) {
                     limitval = "&limit=" + document.getElementById("genlimit").value;
                 }
                 running = true
                 document.getElementById("processing").innerHTML = '<center><img src="/static/images/processing.gif" style="margin-bottom: -23px;"></center>';
                 document.getElementById("historylistresults").innerHTML = "";
+                document.getElementById("treearea").style.display = "none";
                 document.getElementById("completeness").innerHTML = "";
                 document.getElementById("searchbutton").setAttribute("class", "cta cta-red");
                 document.getElementById("searchbutton").innerHTML = "Stop Search";
@@ -121,7 +128,7 @@
                     }
                 });
                 $.ajax({
-                    url: "/historyprocess?profile={{userid}}&master="+masterval+"&project="+projectval+"&problem="+ problemval + limitval,
+                    url: "/historyprocess?profile={{userid}}&master="+masterval+"&project="+projectval+"&complete="+completeval+"&problem="+ problemval + limitval,
                     cache: false,
                     dataType: "html"
                 });
@@ -129,17 +136,20 @@
         }
     }
     function updateCompleteness() {
-        $.ajax({
-            url: "/treecomplete",
-            cache: false,
-            dataType: "html",
-            success: function(data) {
-                if (data.trim().length > 0) {
-                    document.getElementById("treearea").style.display = "block";
-                    document.getElementById("completeness").innerHTML = data;
+        completeval = document.getElementById("completecheck").checked;
+        if (completeval) {
+            $.ajax({
+                url: "/treecomplete",
+                cache: false,
+                dataType: "html",
+                success: function(data) {
+                    if (data.trim().length > 0) {
+                        document.getElementById("treearea").style.display = "block";
+                        document.getElementById("completeness").innerHTML = data;
+                    }
                 }
-            }
-        });
+            });
+        }
     }
     function updateHistory() {
         $.ajax({
@@ -163,37 +173,53 @@
         $('.slideDownProject').slideUp();
         $('.slideDownProblem').slideUp();
         $('.slideDownMaster').slideUp();
+        $('.slideDownComplete').slideUp();
         $('.slideDownLimit').slideToggle();
     }
     function masterHelp() {
         $('.slideDownProject').slideUp();
         $('.slideDownProblem').slideUp();
         $('.slideDownLimit').slideUp();
+        $('.slideDownComplete').slideUp();
         $('.slideDownMaster').slideToggle();
     }
     function projectHelp() {
         $('.slideDownProblem').slideUp();
         $('.slideDownMaster').slideUp();
         $('.slideDownLimit').slideUp();
+        $('.slideDownComplete').slideUp();
         $('.slideDownProject').slideToggle();
     }
     function problemHelp() {
         $('.slideDownProject').slideUp();
         $('.slideDownMaster').slideUp();
         $('.slideDownLimit').slideUp();
+        $('.slideDownComplete').slideUp();
         $('.slideDownProblem').slideToggle();
-
+    }
+    function completeHelp() {
+        $('.slideDownProject').slideUp();
+        $('.slideDownMaster').slideUp();
+        $('.slideDownLimit').slideUp();
+        $('.slideDownProblem').slideUp();
+        $('.slideDownComplete').slideToggle();
     }
     function handleChange() {
         master = document.getElementById("mastercheck");
         project = document.getElementById("projectcheck");
         problem = document.getElementById("problemcheck");
         limit = document.getElementById("limitcheck");
-        note = ""
+        complete = document.getElementById("completecheck");
+        note = "";
         if (limit.checked) {
             document.getElementById("limiticon").style.display = "inline";
         } else {
             document.getElementById("limiticon").style.display = "none";
+        }
+        if (complete.checked) {
+            document.getElementById("completeicon").style.display = "inline";
+        } else {
+            document.getElementById("completeicon").style.display = "none";
         }
         if (project.checked) {
             document.getElementById("projecticon").style.display = "inline";
@@ -238,7 +264,7 @@
             }
             var isnum = /^\d+$/.test(profile_id);
             if (isnum) {
-                profile_id = "profile-g" + profile_id
+                profile_id = "profile-g" + profile_id;
             }
             if (profile_id.indexOf("profile-") != -1) {
                 window.location.href = "/history?profile=" + profile_id;
@@ -288,6 +314,8 @@
                         <span id="limiticon" style="padding-left: 2px; padding-right: 2px;"><img
                                 src="/static/images/top2.png" style="margin-bottom: -3px;" alt="Limit Results"
                                 title="Limit Results"></span>
+                        <span id="completeicon" style="padding-left: 2px; padding-right: 2px;"><img
+                                src="/static/images/tree.png" style="margin-bottom: -2px;" alt="Tree Completeness"></span>
                         <span id="projecticon" style="padding-left: 2px; padding-right: 2px;"><img
                                 src="/static/images/project.png" style="margin-bottom: -3px;" alt="Project Profiles"
                                 title="Project Profiles"></span>
@@ -315,8 +343,23 @@
                 </td>
                 <td align="right">
                     <img src="/static/images/help.png"
-                         style="padding-left: 3px; margin-bottom: -3px; cursor:pointer;" title="Project Profile Tip"
-                         alt="Project Profile Tip" onclick='limitHelp()'></td>
+                         style="padding-left: 3px; margin-bottom: -3px; cursor:pointer;" title="Limit Search Tip"
+                         alt="Limit Search Tip" onclick='limitHelp()'></td>
+            </tr>
+            <tr>
+                <td colpsan='4' style="padding-top: 4px;"></td>
+            </tr>
+            <tr>
+                <td><img src="/static/images/tree.png" style="margin-bottom: -3px; padding-right: 1px;"></td>
+                <td style="padding-top: 1px;"><input type="checkbox" id="completecheck" checked="true"
+                                                     onchange='handleChange();'></td>
+                <td valign="center" style="padding-bottom: 2px;">Include Tree Completeness during
+                    Search
+                </td>
+                <td align="right">
+                    <img src="/static/images/help.png"
+                         style="padding-left: 3px; margin-bottom: -3px; cursor:pointer;" title="Tree Completeness Tip"
+                         alt="Tree Completeness Tip" onclick='completeHelp()'></td>
             </tr>
             <tr>
                 <td colpsan='4' style="padding-top: 4px;"></td>
@@ -365,6 +408,8 @@
                          style="padding-left: 3px; margin-bottom: -3px; cursor:pointer;" title="Problem Profile Tip"
                          alt="Problem Profile Tip" onclick='problemHelp()'></td>
             </tr>
+
+
         </table>
         <div style="margin-top: 10px;">
             <div class="slideDownProject"
@@ -408,6 +453,12 @@
                 <strong>Limit Results: </strong>Searching for ancestors can take an extended period of time.
                 Limiting the results provides a quicker completion time and reduces the burden placed on the server.
                 Unchecking this option will search all ancestors to the very top of the tree, possibly over 100 generations.
+            </div>
+            <div class="slideDownComplete"
+                 style="display: none; font-size: x-small; min-width: 380px; max-width:650px; text-align: left;">
+                <strong>Tree Completeness: </strong>This option will analyze each generation and show how complete
+                the generation is against the total possible direct ancestors.  This will only analyze parents and does not
+                consider siblings.  The tree completeness is added below the search results.
             </div>
         </div>
     </div>

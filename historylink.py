@@ -601,6 +601,7 @@ class HistoryProcess(BaseHandler):
         master = self.get_argument("master", None)
         project = self.get_argument("project", True)
         problem = self.get_argument("problem", None)
+        complete = self.get_argument("complete", True)
         limit = self.get_argument("limit", None)
         if master == "false":
             master = None
@@ -615,6 +616,7 @@ class HistoryProcess(BaseHandler):
         self.application.linkHolder.set(user["id"], "master", master)
         self.application.linkHolder.set(user["id"], "project", project)
         self.application.linkHolder.set(user["id"], "problem", problem)
+        self.application.linkHolder.set(user["id"], "complete", complete)
         self.application.linkHolder.set(user["id"], "limit", limit)
         self.application.linkHolder.set(user["id"], "rootprofile", profile)
         if not options.historyprofiles:
@@ -738,6 +740,10 @@ class SubWorker(threading.Thread):
         #with self.lock:
         profile = self.root.user["id"]
         the_group = self.root.base.backend.get_family_group(self.family_list, self.root.user)
+        master = self.root.cookie.get(profile, "master")
+        problem = self.root.cookie.get(profile, "problem")
+        project = self.root.cookie.get(profile, "project")
+        complete = self.root.cookie.get(profile, "complete")
         if the_group=="Invalid access token":
             self.root.cookie.stop(profile)
             self.root.base.set_secure_cookie("access_token", "")
@@ -746,18 +752,16 @@ class SubWorker(threading.Thread):
         if the_group:
             for this_family in the_group:
                 rematch = None
+                rootprofile = None
                 done = self.root.checkdone()
                 if done:
                     break
                 relatives = this_family.get_family_branch_group()
-                master = self.root.cookie.get(profile, "master")
-                problem = self.root.cookie.get(profile, "problem")
-                project = self.root.cookie.get(profile, "project")
                 gen = self.root.cookie.get(profile, "gen")
-
                 theparents = this_family.get_parents()
-                parentscount = len(theparents)
-                rootprofile = this_family.get_focus()
+                if complete:
+                    parentscount = len(theparents)
+                    rootprofile = this_family.get_focus()
                 if rootprofile:
                     rootcount = self.root.cookie.get_parentmatch(profile, gen, rootprofile)
                     if rootcount == 0:
@@ -794,21 +798,22 @@ class SubWorker(threading.Thread):
                         self.root.cookie.append_familyroot(profile, parent)
                 self.root.cookie.add_history(profile, self.root.cookie.get_familyroot(profile))
 
-            for this_family in the_group:
-                rootprofile = this_family.get_focus()
-                if rootprofile:
-                    theparents = this_family.get_parents()
-                    parentscount = len(theparents)
-                    gen = self.root.cookie.get(profile, "gen")
-                    if not gen:
-                        return
-                    rootcount = self.root.cookie.get_parentmatch(profile, gen+1, rootprofile)
-                    if rootcount > 0:
-                        self.root.cookie.addParentCount(profile, gen+1, parentscount*rootcount)
-                        while rootcount > 0:
-                            rootcount -=1
-                            for parent in theparents:
-                                self.root.cookie.add_parentmatch(profile, gen+2, parent)
+            if complete:
+                for this_family in the_group:
+                    rootprofile = this_family.get_focus()
+                    if rootprofile:
+                        theparents = this_family.get_parents()
+                        parentscount = len(theparents)
+                        gen = self.root.cookie.get(profile, "gen")
+                        if not gen:
+                            return
+                        rootcount = self.root.cookie.get_parentmatch(profile, gen+1, rootprofile)
+                        if rootcount > 0:
+                            self.root.cookie.addParentCount(profile, gen+1, parentscount*rootcount)
+                            while rootcount > 0:
+                                rootcount -=1
+                                for parent in theparents:
+                                    self.root.cookie.add_parentmatch(profile, gen+2, parent)
 
 class LoginHandler(BaseHandler):
     @tornado.web.asynchronous
