@@ -118,7 +118,7 @@ class ErrorHandler(tornado.web.RequestHandler):
                 data = f.read()
                 f.close()
                 return data
-        return "<html><title>%(code)d: %(message)s</title>"\
+        return "<html><title>%(code)d: %(message)s</title>" \
                "<body class='bodyErrorPage'>%(code)d: %(message)s</body></html>" % {
                    "code": status_code,
                    "message": httplib.responses[status_code],
@@ -380,17 +380,17 @@ class BaseHandler(tornado.web.RequestHandler):
     def get_login_url(self, next=None):
         if not next:
             next = self.request.full_url()
-        if not next.startswith("http://") and not next.startswith("https://") and\
-           not next.startswith("http%3A%2F%2F") and not next.startswith("https%3A%2F%2F"):
+        if not next.startswith("http://") and not next.startswith("https://") and \
+                not next.startswith("http%3A%2F%2F") and not next.startswith("https%3A%2F%2F"):
             next = urlparse.urljoin(self.request.full_url(), next)
         code = self.get_argument("code", None)
         if code:
-            return self.request.protocol + "://" + self.request.host +\
+            return self.request.protocol + "://" + self.request.host + \
                    self.reverse_url("login") + "?" + urllib.urlencode({
                 "next": next,
                 "code": code,
                 })
-        redirect_uri = self.request.protocol + "://" + self.request.host +\
+        redirect_uri = self.request.protocol + "://" + self.request.host + \
                        self.reverse_url("login") + "?" + urllib.urlencode({"next": next})
         loginurl = "https://www.geni.com/platform/oauth/authorize?" + urllib.urlencode({
             "client_id": options.geni_app_id,
@@ -429,7 +429,7 @@ class ProjectUpdate(BaseHandler):
             try:
                 print "Updating Project: " + item["name"]
             except:
-                print "Updating Project: " + item["id"]
+                print "Updating Project: project-" + str(item["id"])
             self.backend.add_project(str(item["id"]), user)
         options.historyprofiles = set(self.backend.get_history_profiles())
 
@@ -475,9 +475,11 @@ class ProjectHandler(BaseHandler):
     @tornado.web.authenticated
     @tornado.web.asynchronous
     def get(self):
-        projects = self.backend.query_projects()
+        delete = self.get_argument("delete", None)
+        if delete:
+            self.backend.delete_project(delete)
         try:
-            self.render("projects.html", projects=projects)
+            self.render("projects.html")
         except:
             return
 
@@ -535,13 +537,13 @@ class HistoryList(BaseHandler):
             if item["message"]:
                 if (i > showmatch):
                     try:
-                        logging.info(" *** " + str(item["message"]) + " Match for " +  str(user["name"]) + " on " + item["id"] + ": " + item["name"])
+                        logging.info(" *** " + str(item["message"]) + " Match for " +  str(user["name"]) + " on " + str(item["id"]) + ": " + item["name"])
                     except:
                         pass
             else:
                 if (i > showmatch):
                     try:
-                        logging.info(" *** Project Match for " +  str(user["name"]) + " on " + item["id"] + ": " + item["name"])
+                        logging.info(" *** Project Match for " +  str(user["name"]) + " on " + str(item["id"]) + ": " + item["name"])
                     except:
                         pass
                 for project in item["projects"]:
@@ -739,6 +741,11 @@ class SubWorker(threading.Thread):
     def run(self):
         #with self.lock:
         profile = self.root.user["id"]
+        if not profile:
+            return
+        running = self.root.cookie.get(profile, "running")
+        if running == 0:
+            return
         the_group = self.root.base.backend.get_family_group(self.family_list, self.root.user)
         master = self.root.cookie.get(profile, "master")
         problem = self.root.cookie.get(profile, "problem")
@@ -823,12 +830,12 @@ class LoginHandler(BaseHandler):
         if not next:
             self.redirect(self.get_login_url(self.reverse_url("home")))
             return
-        if not next.startswith("https://" + self.request.host + "/") and\
-           not next.startswith("http://" + self.request.host + "/") and\
-           not next.startswith("http%3A%2F%2F" + self.request.host + "/") and\
-           not next.startswith("https%3A%2F%2F" + self.request.host + "/") and\
-           not next.startswith(self.settings.get("geni_canvas_id")) and\
-           not next.endswith(options.geni_app_id):
+        if not next.startswith("https://" + self.request.host + "/") and \
+                not next.startswith("http://" + self.request.host + "/") and \
+                not next.startswith("http%3A%2F%2F" + self.request.host + "/") and \
+                not next.startswith("https%3A%2F%2F" + self.request.host + "/") and \
+                not next.startswith(self.settings.get("geni_canvas_id")) and \
+                not next.endswith(options.geni_app_id):
             raise tornado.web.HTTPError(
                 404, "Login redirect (%s) spans hosts", next)
         if self.get_argument("error", None):
@@ -841,9 +848,9 @@ class LoginHandler(BaseHandler):
             self.redirect(self.get_login_url(next))
             return
 
-        redirect_uri = self.request.protocol + "://" + self.request.host +\
+        redirect_uri = self.request.protocol + "://" + self.request.host + \
                        self.request.path + "?" + urllib.urlencode({"next": next})
-        url = "https://www.geni.com/platform/oauth/request_token?" +\
+        url = "https://www.geni.com/platform/oauth/request_token?" + \
               urllib.urlencode({
                   "client_id": options.geni_app_id,
                   "client_secret": options.geni_app_secret,
@@ -951,7 +958,7 @@ class Backend(object):
             return
         query = ""
         for item in projectprofiles:
-            query += '(' + project_id + ',"' + item["id"] + '"),'
+            query += '(' + project_id + ',"' + str(item["id"]) + '"),'
         query = "INSERT IGNORE INTO links (project_id,profile_id) VALUES " + query[:-1]
         try:
             self.db.execute(query)
@@ -1003,6 +1010,17 @@ class Backend(object):
         except:
             result = self.db.query("SELECT * FROM projects ORDER BY id")
         return result
+
+    def delete_project(self, id):
+        if id:
+            print "Deleting project-" + str(id)
+            try:
+                self.db.execute("DELETE FROM links WHERE project_id=%s", id)
+                self.db.execute("DELETE FROM projects WHERE id=%s", id)
+            except:
+                self.db.execute("DELETE FROM links WHERE project_id=%s", id)
+                self.db.execute("DELETE FROM projects WHERE id=%s", id)
+        return
 
     def get_history_profiles(self):
         try:
