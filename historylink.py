@@ -783,11 +783,12 @@ class SubWorker(threading.Thread):
                             self.root.cookie.add_parentmatch(profile, gen+1, parent)
 
                 for relative in relatives:
-                    if project and relative.get_id() in options.historyprofiles:
+                    if (project or problem) and relative.get_id() in options.historyprofiles:
                         with self.lock:
-                            projects = self.root.base.backend.get_projects(relative.get_id())
-                        match = {"id": relative.get_id(), "relation": relative.get_rel(gen), "name": relative.get_name(), "message": False, "projects": projects}
-                        rematch = self.root.cookie.add_matches(profile, match)
+                            projects = self.root.base.backend.get_projects(relative.get_id(), project, problem)
+                            if len(projects) > 0:
+                                match = {"id": relative.get_id(), "relation": relative.get_rel(gen), "name": relative.get_name(), "message": False, "projects": projects}
+                                rematch = self.root.cookie.add_matches(profile, match)
                     elif master and relative.is_master():
                         projects = [None]
                         match = {"id": relative.get_id(), "relation": relative.get_rel(gen), "name": relative.get_name(), "message": "Master Profile", "projects": projects}
@@ -942,6 +943,7 @@ class Backend(object):
             return
         if not project_id.isdigit():
             return
+        self.delete_project(project_id)
         projectname = self.get_project_name(project_id, user)
         try:
             self.db.execute(
@@ -1040,14 +1042,19 @@ class Backend(object):
             projects = self.db.query("SELECT id,name FROM projects")
         return projects
 
-    def get_projects(self, id):
+    def get_projects(self, id, project=None, problem=None):
         try:
             projects = self.db.query("SELECT links.project_id, projects.name FROM links, projects WHERE links.project_id=projects.id AND links.profile_id = %s", id)
         except:
             projects = self.db.query("SELECT links.project_id, projects.name FROM links, projects WHERE links.project_id=projects.id AND links.profile_id = %s", id)
         projectlist = []
         for item in projects:
-            projectlist.append({"id": item["project_id"], "name": item["name"]})
+            if problem and project:
+                projectlist.append({"id": item["project_id"], "name": item["name"]})
+            elif problem and item["project_id"] == 10985:
+                projectlist.append({"id": item["project_id"], "name": item["name"]})
+            elif project and item["project_id"] != 10985:
+                projectlist.append({"id": item["project_id"], "name": item["name"]})
         return projectlist
 
     def get_profile_count(self):
