@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2012 Jeff Gentes
+# Copyright 2012-2013 Jeff Gentes
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-# Copyright 2012 Jeff Gentes
+# Copyright 2012-2013 Jeff Gentes
 #
 # Licensed under the Apache License, Version 2.0 (the "License"); you may
 # not use this file except in compliance with the License. You may obtain
@@ -65,6 +65,7 @@ define("geni_app_secret")
 define("geni_canvas_id")
 define("geni_namespace")
 define("app_url")
+define("service_token")
 define("listenport", type=int)
 define("silent", type=bool)
 define("historyprofiles", type=set)
@@ -89,7 +90,7 @@ class GeniApplication(tornado.web.Application):
         #tornado.wsgi.WSGIApplication.__init__(self, [
         tornado.web.Application.__init__(self, [
             tornado.web.url(r"/", HomeHandler, name="home"),
-            tornado.web.url(r"/projects", ProjectHandler, name="logout"),
+            tornado.web.url(r"/projects", ProjectHandler, name="project"),
             tornado.web.url(r"/history", HistoryHandler, name="history"),
             tornado.web.url(r"/historylist", HistoryList),
             tornado.web.url(r"/historycount", HistoryCount),
@@ -419,11 +420,12 @@ class HomeHandler(BaseHandler):
 
 class ProjectUpdate(BaseHandler):
     @tornado.web.asynchronous
-    @tornado.web.authenticated
     def get(self):
         self.write("update initiated")
         self.finish()
         user = self.current_user
+        if not user:
+            user = {'id': options.geni_app_id, 'access_token': options.service_token, 'name': "HistoryLink App"}
         projects = self.backend.get_projectlist()
         for item in projects:
             try:
@@ -943,8 +945,8 @@ class Backend(object):
             return
         if not project_id.isdigit():
             return
-        self.delete_project(project_id)
         projectname = self.get_project_name(project_id, user)
+        self.delete_project(project_id)
         try:
             self.db.execute(
                 "INSERT INTO projects (id, name) VALUES (%s,%s) "
