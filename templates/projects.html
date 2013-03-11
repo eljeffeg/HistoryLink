@@ -1,11 +1,19 @@
 {% extends "base.html" %}
 {% block body %}
 <script language="javascript" type="text/javascript">
+    var running = false;
     String.prototype.startswith = function (string) {
         return(this.indexOf(string) === 0);
     };
-    function submitProject() {
-        var project_id = document.getElementById("projectval").value.toString().trim();
+    function submitProject(project_id) {
+        if (running) {
+            return;
+        }
+        var submittype = "Refreshing Project #";
+        if (project_id == null) {
+            submittype = "Adding Project #";
+            project_id = document.getElementById("projectval").value.toString().trim();
+        }
         if (project_id.length > 0) {
             if (project_id.indexOf("/") != -1) {
                 project_id = project_id.substring(project_id.lastIndexOf('/')+1);
@@ -14,28 +22,43 @@
             }
             var isnum = /^\d+$/.test(project_id);
             if (isnum) {
+                running = true;
+                $('.progress3').slideToggle();
+                $('.progress2').slideToggle();
                 document.getElementById("addbutton").disabled = true;
-                document.getElementById("processing").innerHTML = '<br/><img src="/static/images/processing.gif">';
+                document.getElementById("projectprocessing").innerHTML = submittype + project_id + "<img src='/static/images/processing1.gif' style='padding-left: 15px;'>";
                 window.setTimeout(function() {
-                    $.post("/projectsubmit", {project: project_id}, function() {
-                        document.getElementById("processing").innerHTML = '<br/><table><tr><td><img src="/static/images/checkmarkgreen20px.png" style="padding-right: 3px;"></td><td valign="top" style="padding-top: 1px;"><strong>Project ' + project_id + ' Added</strong></td></tr></table>';
-                        document.getElementById("addbutton").disabled = false;
-                        $.ajax({
-                            url: "/projectlist",
-                            cache: false,
-                            dataType: "html",
-                            success: function(data) {
-                                if (data != "DONE") {
-                                    document.getElementById("projectlist").innerHTML = data;
-                                } else {
-                                    //Try again
-                                    $('#projectlist').load('/projectlist');
+                    $.ajax({
+                        type: "POST",
+                        url: "/projectsubmit",
+                        data: {project: project_id},
+                        timeout: 300000,
+                        error: function (xhr, status) {
+                            $('.progress3').slideToggle();
+                            $('.progress2').slideToggle();
+                            document.getElementById("projectprocessing").innerHTML = "";
+                            running = false;
+                        },
+                        success: function(response) {
+                            $('.progress3').slideToggle();
+                            $('.progress2').slideToggle();
+                            document.getElementById("projectprocessing").innerHTML = "";
+                            document.getElementById("addbutton").disabled = false;
+                            $.ajax({
+                                url: "/projectlist",
+                                cache: false,
+                                dataType: "html",
+                                success: function(data) {
+                                    running = false;
+                                    if (data != "DONE") {
+                                        document.getElementById("projectlist").innerHTML = data;
+                                    } else {
+                                        //Try again
+                                        $('#projectlist').load('/projectlist');
+                                    }
                                 }
-                            }
-                        });
-                        window.setTimeout(function() {
-                            document.getElementById("processing").innerHTML = '<br/>';
-                        }, 5000);
+                            });
+                        }
                     });
                 }, 500);
             } else {
@@ -47,7 +70,7 @@
     function entsub(e,form){
         var key=e.keyCode || e.which;
         if (key==13){
-            submitProject();
+            submitProject(null);
         }
     }
 </script>
@@ -57,9 +80,7 @@
     HistoryLink does not contain all Geni Projects, as many do not relate to famous or historical figures.&nbsp;&nbsp;If there is a project you think should be added or updated, please submit it below.
     Avoid projects that primarily serve as working groups, such as <a href="http://www.geni.com/projects/Mega-Merge/10927" target="_blank">Mega-Merge</a>.<br/><br/>
     <center>
-        <input type="text" name="projectval" id="projectval" onkeypress="entsub(event,this.form);" style="width: 300px;"><button style="margin-left: 8px;" onclick="submitProject();" id="addbutton">Add Project</button><br>
-
-        <div id="processing"><br/></div>
+        <input type="text" name="projectval" id="projectval" onkeypress="entsub(event,this.form);" style="width: 300px;"><button style="margin-left: 8px;" onclick="submitProject(null);" id="addbutton">Add Project</button></br>
     </center>
 </div>
 <br/>
