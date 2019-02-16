@@ -1,13 +1,1 @@
-= HistoryLink =
-HistoryLink will compare your direct ancestors (and their siblings) to projects on Geni that focus on historical or famous individuals. It will list any matches found, the relation, and what projects they belong to. It can also search for master profiles, problem profiles, and can create a simple visualization of tree completeness.  Note that not being connected to the "[http://www.geni.com/worldfamilytree world family tree]" will severely limit the potential for ancestor matches.
-
-* Website: http://historylink.herokuapp.com/
-* AppPage: http://www.geni.com/platform/apps/historylink
-* Project: http://www.geni.com/projects/HistoryLink/14021
-
-== License ==
-This work is licensed under a Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License.  You may obtain a copy of the License at:
-
-::http://creativecommons.org/licenses/by-nc-sa/4.0/
-
-Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions and limitations under the License.
+This project has been moved to https://github.com/jeffg2k/HistoryLinkTools
